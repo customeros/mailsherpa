@@ -2,24 +2,19 @@ package main
 
 import (
 	"fmt"
-	emailSyntax "github.com/customeros/mailhawk/internal/syntax"
+	"os"
+
+	"github.com/customeros/mailhawk/internal/mx"
 )
 
 func main() {
-	testEmails := []string{
-		"user@example.com",
-		"user.name+tag@example.com",
-		"user.name@example.co.uk",
-		"user@localhost",
-		"user@192.168.1.1",
-		"user.name@example..com",
-		"user@.com",
-		"@example.com",
-		"user@example.",
-		"user name@example.com",
+	if len(os.Args) != 2 {
+		fmt.Println("Usage: go run main.go <email>")
+		return
 	}
+	email := os.Args[1]
 
-	for _, email := range testEmails {
-		fmt.Printf("%-30s : %v\n", email, emailSyntax.IsValidEmailSyntax(email))
-	}
+	mxRecord, _ := mx.GetMXRecordsForEmail(email)
+	fmt.Println(mxRecord)
+	fmt.Println(mx.GetEmailServiceProviderFromMX(mxRecord))
 }
