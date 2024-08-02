@@ -3,11 +3,13 @@ package syntax
 import (
 	"regexp"
 	"strings"
+
+	"golang.org/x/net/publicsuffix"
 )
 
 var (
 	usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9.!#$%&'+-/=?^_` + "`" + `{|}~]+$`)
-	domainRegex   = regexp.MustCompile(`^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$`)
+	domainRegex   = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])*$`)
 )
 
 func IsValidEmailSyntax(email string) bool {
@@ -42,23 +44,50 @@ func isValidUsername(username string) bool {
 }
 
 func isValidDomain(domain string) bool {
+	// Check if domain starts or ends with a dot
 	if strings.HasPrefix(domain, ".") || strings.HasSuffix(domain, ".") {
 		return false
 	}
 
+	// Split the domain into its parts
 	domainParts := strings.Split(domain, ".")
+
+	// A valid domain must have at least 2 parts
 	if len(domainParts) < 2 {
 		return false
 	}
 
+	// Check each part of the domain
 	for _, part := range domainParts {
 		if len(part) == 0 || len(part) > 63 {
 			return false
 		}
 	}
 
-	return len(domainParts[len(domainParts)-1]) >= 2 &&
-		domainRegex.MatchString(domain)
+	// Check if the domain matches the regex pattern
+	if !domainRegex.MatchString(domain) {
+		return false
+	}
+
+	// Extract the TLD using the public suffix list
+	tld, _ := publicsuffix.PublicSuffix(domain)
+	if tld == "" {
+		return false
+	}
+
+	// Check if the extracted TLD is valid
+	if !isValidTLD(tld) {
+		return false
+	}
+
+	// Ensure the domain ends with the extracted TLD
+	return strings.HasSuffix(domain, "."+tld)
+}
+
+func isValidTLD(tld string) bool {
+	tld = strings.TrimPrefix(tld, ".")
+	_, icann := publicsuffix.PublicSuffix("example." + tld)
+	return icann
 }
 
 func GetEmailUserAndDomain(email string) (string, string, bool) {
@@ -69,6 +98,6 @@ func GetEmailUserAndDomain(email string) (string, string, bool) {
 	if !isValidUsername(user) || !isValidDomain(domain) {
 		return "", "", false
 	}
+
 	return user, domain, ok
 }
-

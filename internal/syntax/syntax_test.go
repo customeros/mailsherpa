@@ -169,3 +169,32 @@ func TestGetEmailUserAndDomain(t *testing.T) {
 		})
 	}
 }
+
+func TestIsValidTLD(t *testing.T) {
+	tests := []struct {
+		name     string
+		tld      string
+		expected bool
+	}{
+		{"Valid com TLD", "com", true},
+		{"Valid org TLD", "org", true},
+		{"Valid net TLD", "net", true},
+		{"Valid country code uk", "uk", true},
+		{"Valid country code with subdomain co.uk", "co.uk", true},
+		{"Valid long TLD education", "education", true},
+		{"Invalid TLD", "invalid", false},
+		{"Empty string", "", false},
+		{"TLD with leading dot", ".com", true},
+		{"Invalid TLD with space", "c om", false},
+		{"Invalid TLD with special character", "com!", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isValidTLD(tt.tld)
+			if result != tt.expected {
+				t.Errorf("isValidTLD(%q) = %v, want %v", tt.tld, result, tt.expected)
+			}
+		})
+	}
+}
