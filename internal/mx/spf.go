@@ -8,6 +8,28 @@ import (
 	"github.com/customeros/mailhawk/internal/syntax"
 )
 
+func GetEmailProvidersFromSPF(email string) ([]string, error) {
+	spf, err := getSPFRecords(email)
+	if err != nil {
+		return []string{}, nil
+	}
+
+	providers := []string{}
+
+	for _, record := range spf {
+		includes := parseIncludes(record)
+		for _, record := range includes {
+			exists := EmailProviders[record]
+			if exists != "" {
+				providers = append(providers, exists)
+			}
+		}
+
+	}
+
+	return providers, nil
+}
+
 func getSPFRecords(email string) ([]string, error) {
 	_, domain, ok := syntax.GetEmailUserAndDomain(email)
 	if !ok {
@@ -34,26 +56,4 @@ func parseIncludes(spfRecord string) []string {
 	}
 
 	return includes
-}
-
-func GetEmailProvidersFromSPF(email string) ([]string, error) {
-	spf, err := getSPFRecords(email)
-	if err != nil {
-		return []string{}, nil
-	}
-
-	providers := []string{}
-
-	for _, record := range spf {
-		includes := parseIncludes(record)
-		for _, record := range includes {
-			exists := EmailProviders[record]
-			if exists != "" {
-				providers = append(providers, exists)
-			}
-		}
-
-	}
-
-	return providers, nil
 }

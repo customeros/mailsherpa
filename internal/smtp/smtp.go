@@ -8,14 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/customeros/mailhawk/internal/mx"
 	"golang.org/x/net/proxy"
+
+	"github.com/customeros/mailhawk/internal/mx"
 )
 
 type SMPTValidation struct {
 	canConnectSmtp bool
-	isDeliverable  bool
-	isCatchAll     bool
 	inboxFull      bool
 	SMTPError      string
 }
@@ -27,16 +26,17 @@ type ProxySetup struct {
 	Password string
 }
 
-func VerifyEmailAddress(email, fromDomain, fromEmail string, proxy ProxySetup) (SMPTValidation, error) {
+func VerifyEmailAddress(email, fromDomain, fromEmail string, proxy ProxySetup) (bool, SMPTValidation, error) {
 	results := SMPTValidation{}
+	var isVerified bool
 
 	mxServers, err := mx.GetMXRecordsForEmail(email)
 	if err != nil {
-		return results, err
+		return false, results, err
 	}
 
 	if len(mxServers) == 0 {
-		return results, fmt.Errorf("no MX records found for domain")
+		return false, results, fmt.Errorf("no MX records found for domain")
 	}
 
 	var conn net.Conn
@@ -49,29 +49,29 @@ func VerifyEmailAddress(email, fromDomain, fromEmail string, proxy ProxySetup) (
 		conn, client, err = connectToSMTP(mxServers[0])
 	}
 	if err != nil {
-		return results, err
+		return false, results, err
 	}
 
 	defer conn.Close()
 
 	if err := readSMTPgreeting(client); err != nil {
-		return results, err
+		return false, results, err
 	}
 
 	if err := sendHELO(conn, client, fromDomain); err != nil {
-		return results, err
+		return false, results, err
 	}
 
 	if err := sendMAILFROM(conn, client, fromEmail); err != nil {
-		return results, err
+		return false, results, err
 	}
 
-	results, err = sendRCPTTO(conn, client, email)
+	isVerified, results, err = sendRCPTTO(conn, client, email)
 	if err != nil {
-		return SMPTValidation{}, err
+		return false, SMPTValidation{}, err
 	}
 
-	return results, nil
+	return isVerified, results, nil
 }
 
 func connectToSMTP(mxServer string) (net.Conn, *bufio.Reader, error) {
@@ -148,73 +148,71 @@ func sendMAILFROM(conn net.Conn, smtpClient *bufio.Reader, fromEmail string) err
 	return nil
 }
 
-func sendRCPTTO(conn net.Conn, smtpClient *bufio.Reader, emailToValidate string) (SMPTValidation, error) {
+func sendRCPTTO(conn net.Conn, smtpClient *bufio.Reader, emailToValidate string) (bool, SMPTValidation, error) {
 	results := SMPTValidation{}
 	rcpt := fmt.Sprintf("RCPT TO:<%s>", emailToValidate)
 	resp, err := sendSMTPcommand(conn, smtpClient, rcpt)
 	if err != nil {
-		return results, fmt.Errorf("RCPT TO command failed: %w", err)
+		return false, results, fmt.Errorf("RCPT TO command failed: %w", err)
 	}
 
 	respCode := strings.SplitN(resp, " ", 2)[0]
 
 	switch respCode {
 	case "250":
-		results.isDeliverable = true
 		results.canConnectSmtp = true
-		return results, nil
+		return true, results, nil
 	case "251":
 		results.canConnectSmtp = true
-		results.isDeliverable = true
-		return results, nil
+		return true, results, nil
 	case "450":
 		results.canConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
-		return results, nil
+		return false, results, nil
 	case "451":
 		results.canConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
-		return results, nil
+		return false, results, nil
 	case "452":
 		results.canConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
-		return results, nil
+		return false, results, nil
 	case "503":
 		results.canConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
-		return results, nil
+		return false, results, nil
 	case "550":
 		results.canConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
-		return results, nil
+		return false, results, nil
 	case "551":
 		results.canConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
-		return results, nil
+		return false, results, nil
 	case "552":
 		results.inboxFull = true
 		results.canConnectSmtp = true
-		return results, nil
+		return false, results, nil
 	case "553":
 		results.canConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
-		return results, nil
+		return false, results, nil
 	case "554":
 		results.canConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
-		return results, nil
+		return false, results, nil
 	default:
 		results.canConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
-		return results, nil
+		return false, results, nil
 	}
 }
