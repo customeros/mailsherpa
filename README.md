@@ -2,16 +2,15 @@
 
 ### To Do
 
- [x] Email syntax check
- [x] Domain TLD validity
- [x] MX record check
- [x] Firewall check
- [x] Determine ESP
- [x] SMTP/Telnet conversation check
- [x] Catch-all check
- [] Disposable email check
- [] Role-based email check
- [] Free email provider check
+[x] Email syntax check
+[x] Domain TLD validity
+[x] MX record check
+[x] Firewall check
+[x] Determine ESP
+[x] SMTP/Telnet conversation check
+[x] Catch-all check
+[] Role-based email check
+[x] Free email provider check
 
 ### Enhancements
 
