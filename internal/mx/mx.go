@@ -71,5 +71,13 @@ func GetEmailServiceProviderFromMX(mxRecords []string) string {
 		}
 	}
 
-	return potentialRoot
+	root := strings.TrimSuffix(potentialRoot, ".com")
+	root = strings.TrimSuffix(root, ".eu")
+	root = strings.TrimSuffix(root, ".net")
+
+	return root
+}
+
+func IsFirewall(emailServiceProvider string) string {
+	return Firewalls[emailServiceProvider]
 }
