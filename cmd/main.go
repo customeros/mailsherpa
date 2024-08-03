@@ -17,4 +17,7 @@ func main() {
 	mxRecord, _ := mx.GetMXRecordsForEmail(email)
 	fmt.Println(mxRecord)
 	fmt.Println(mx.GetEmailServiceProviderFromMX(mxRecord))
+	fmt.Println("Firewall:", mx.IsFirewall(mx.GetEmailServiceProviderFromMX(mxRecord)))
+	esp, _ := mx.GetEmailProvidersFromSPF(email)
+	fmt.Println("ESPs:", esp)
 }
