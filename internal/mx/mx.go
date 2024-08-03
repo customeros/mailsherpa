@@ -9,20 +9,6 @@ import (
 	"github.com/customeros/mailhawk/internal/syntax"
 )
 
-func getRawMXRecords(email string) ([]*net.MX, error) {
-	_, domain, ok := syntax.GetEmailUserAndDomain(email)
-	if !ok {
-		return nil, fmt.Errorf("Invalid domain")
-	}
-
-	mxRecords, err := net.LookupMX(domain)
-	if err != nil {
-		return nil, err
-	}
-
-	return mxRecords, nil
-}
-
 func GetMXRecordsForEmail(email string) ([]string, error) {
 	mxRecords, err := getRawMXRecords(email)
 	if err != nil {
@@ -80,4 +66,18 @@ func GetEmailServiceProviderFromMX(mxRecords []string) string {
 
 func IsFirewall(emailServiceProvider string) string {
 	return Firewalls[emailServiceProvider]
+}
+
+func getRawMXRecords(email string) ([]*net.MX, error) {
+	_, domain, ok := syntax.GetEmailUserAndDomain(email)
+	if !ok {
+		return nil, fmt.Errorf("Invalid domain")
+	}
+
+	mxRecords, err := net.LookupMX(domain)
+	if err != nil {
+		return nil, err
+	}
+
+	return mxRecords, nil
 }

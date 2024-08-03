@@ -9,7 +9,7 @@
 [x] Determine ESP
 [x] SMTP/Telnet conversation check
 [x] Catch-all check
-[] Role-based email check
+[x] Role-based email check
 [x] Free email provider check
 
 ### Enhancements
