@@ -13,10 +13,10 @@ type Provider struct {
 	Type string `toml:"type"`
 }
 
-type Domain map[string]Provider
+type KnownProviders map[string]Provider
 
-func getKnownProviders(filename string) (Domain, error) {
-	var domain Domain
+func GetKnownProviders(filename string) (KnownProviders, error) {
+	var domain KnownProviders
 
 	// Read the file
 	content, err := os.ReadFile(filename)

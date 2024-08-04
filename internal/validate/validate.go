@@ -1,90 +1,48 @@
 package validate
 
 import (
+	"fmt"
 	"log"
 
-	"github.com/customeros/mailhawk/internal/mx"
-	"github.com/customeros/mailhawk/internal/smtp"
+	"github.com/customeros/mailhawk/internal/dns"
+	"github.com/customeros/mailhawk/internal/mailserver"
 	"github.com/customeros/mailhawk/internal/syntax"
 )
 
 type EmailValidationRequest struct {
-	email              string
-	fromDomain         string
-	fromEmail          string
-	catchAllTestEmail  string
-	proxy              smpt.ProxySetup
-	roleEmailsFilePath string
-	freeEmailsFilePath string
-	knownSpfFilePath   string
+	Email                string
+	FromDomain           string
+	FromEmail            string
+	CatchAllTestUser     string
+	ValidateFreeAccounts bool
+	ValidateRoleAccounts bool
+	Proxy                mailserver.ProxySetup
+}
+
+type DomainValidation struct {
+	Provider          string
+	AuthorizedSenders dns.AuthorizedSenders
+	IsFirewalled      bool
+	IsCatchAll        bool
+	CanConnectSMTP    bool
 }
 
 type EmailValidatation struct {
-	email             string
-	isDeliverable     bool
-	provider          string
-	authorizedSenders []string
-	risk              emailRisk
-	syntax            emailSyntax
-	smtp              smpt.SMPTValidation
+	IsDeliverable bool
+	IsMailboxFull bool
+	IsRoleAccount bool
+	IsFreeAccount bool
+	SmtpError     string
 }
 
-type emailRisk struct {
-	isRisky       bool
-	isFirewalled  bool
-	isRoleAccount bool
-	isFreeAccount bool
-	isCatchAll    bool
+type SyntaxValidation struct {
+	IsValid bool
+	User    string
+	Domain  string
 }
 
-type emailSyntax struct {
-	isValid bool
-	user    string
-	domain  string
-}
-
-func GetEmailValidation(emailToValidate EmailValidationRequest) EmailValidatation {
-	var results EmailValidatation
-	results.email = emailToValidate.email
-	results.syntax = getEmailSyntax(emailToValidate.email)
-
-	mxRecords, err := mx.GetMXRecordsForEmail(emailToValidate.email)
-	if err != nil {
-		log.Println(err)
-	}
-
-	results.provider = mx.GetEmailServiceProviderFromMX(mxRecords)
-	results.authorizedSenders, err = mx.GetEmailProvidersFromSPF(emailToValidate.email)
-	if err != nil {
-		log.Println(err)
-	}
-
-	results.isDeliverable, results.smtp, err = smpt.VerifyEmailAddress(
-		emailToValidate.email,
-		emailToValidate.fromDomain,
-		emailToValidate.fromEmail,
-		emailToValidate.proxy,
-	)
-	if err != nil {
-		log.Println(err)
-	}
-
-	if results.isDeliverable {
-		results.risk.isCatchAll, _, _ = smpt.VerifyEmailAddress(
-			emailToValidate.catchAllTestEmail,
-			emailToValidate.fromDomain,
-			emailToValidate.fromEmail,
-			emailToValidate.proxy,
-		)
-	}
-
-	isFirewall := mx.IsFirewall(results.provider)
-
-	return results
-}
-
-func getEmailSyntax(email string) emailSyntax {
-	var results emailSyntax
+func ValidateEmailSyntax(email string) SyntaxValidation {
+	var results SyntaxValidation
 	ok := syntax.IsValidEmailSyntax(email)
 	if !ok {
 		return results
@@ -94,8 +52,94 @@ func getEmailSyntax(email string) emailSyntax {
 	if !ok {
 		return results
 	}
-	results.isValid = true
-	results.user = user
-	results.domain = domain
+	results.IsValid = true
+	results.User = user
+	results.Domain = domain
 	return results
+}
+
+func ValidateDomain(validationRequest EmailValidationRequest, knownProviders dns.KnownProviders) DomainValidation {
+	var results DomainValidation
+
+	provider, err := dns.GetEmailProviderFromMx(validationRequest.Email, knownProviders)
+	if err != nil {
+		log.Println("Error getting provider from MX records: %w", err)
+	}
+	results.Provider = provider
+
+	authorizedSenders, err := dns.GetAuthorizedSenders(validationRequest.Email, knownProviders)
+	if err != nil {
+		log.Println("Error getting authorized senders from spf records: %w", err)
+	}
+	results.AuthorizedSenders = authorizedSenders
+
+	if len(results.AuthorizedSenders.Security) > 0 {
+		results.IsFirewalled = true
+	}
+
+	var smptResults mailserver.SMPTValidation
+	results.IsCatchAll, smptResults = catchAllTest(validationRequest)
+	results.CanConnectSMTP = smptResults.CanConnectSmtp
+
+	return results
+}
+
+func ValidateEmail(validationRequest EmailValidationRequest, knownProviders dns.KnownProviders, freeEmails FreeEmails, roleAccounts RoleAccounts) EmailValidatation {
+	var results EmailValidatation
+
+	isFreeEmail, err := IsFreeEmailCheck(validationRequest.Email, freeEmails)
+	if err != nil {
+		log.Printf("Error executing free email check: %v", err)
+	}
+	results.IsFreeAccount = isFreeEmail
+
+	isRoleAccount, err := IsRoleAccountCheck(validationRequest.Email, roleAccounts)
+	if err != nil {
+		log.Printf("Error executing role account check: %v", err)
+	}
+	results.IsRoleAccount = isRoleAccount
+
+	if isFreeEmail && !validationRequest.ValidateFreeAccounts {
+		return results
+	}
+
+	if isRoleAccount && !validationRequest.ValidateRoleAccounts {
+		return results
+	}
+
+	isVerified, smtpValidation, err := mailserver.VerifyEmailAddress(
+		validationRequest.Email,
+		validationRequest.FromDomain,
+		validationRequest.FromEmail,
+		validationRequest.Proxy,
+	)
+	if err != nil {
+		log.Printf("Error validating email via SMTP: %v", err)
+	}
+	results.IsDeliverable = isVerified
+	results.IsMailboxFull = smtpValidation.InboxFull
+	results.SmtpError = smtpValidation.SMTPError
+	return results
+}
+
+func catchAllTest(validationRequest EmailValidationRequest) (bool, mailserver.SMPTValidation) {
+	_, domain, ok := syntax.GetEmailUserAndDomain(validationRequest.Email)
+	if !ok {
+		log.Printf("Invalid email address")
+		return false, mailserver.SMPTValidation{}
+	}
+
+	catchAllEmail := fmt.Sprintf("%s@%s", validationRequest.CatchAllTestUser, domain)
+	isVerified, smtpValidation, err := mailserver.VerifyEmailAddress(
+		catchAllEmail,
+		validationRequest.FromDomain,
+		validationRequest.FromEmail,
+		validationRequest.Proxy,
+	)
+	if err != nil {
+		log.Printf("Error validating email via SMTP: %v", err)
+		return false, mailserver.SMPTValidation{}
+	}
+
+	return isVerified, smtpValidation
 }

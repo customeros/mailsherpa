@@ -2,12 +2,34 @@ package dns
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"sort"
 	"strings"
 
 	"github.com/customeros/mailhawk/internal/syntax"
 )
+
+func GetEmailProviderFromMx(email string, knownProviders KnownProviders) (string, error) {
+	mx, err := GetMXRecordsForEmail(email)
+	if err != nil {
+		return "", err
+	}
+
+	for _, record := range mx {
+		domain := extractRootDomain(record)
+		provider, exists := knownProviders[domain]
+		if !exists {
+			log.Printf("Email provider unknown, please add `%s` to known_email_providers.toml", record)
+		}
+
+		if provider.Type == "enterprise" {
+			return provider.Name, nil
+		}
+	}
+
+	return "", nil
+}
 
 func GetMXRecordsForEmail(email string) ([]string, error) {
 	mxRecords, err := getRawMXRecords(email)
@@ -33,7 +55,7 @@ func GetMXRecordsForEmail(email string) ([]string, error) {
 	return result, nil
 }
 
-func GetEmailServiceProviderFromMX(mxRecords []string) string {
+func getEmailServiceProviderFromMX(mxRecords []string) string {
 	if len(mxRecords) == 0 {
 		return ""
 	}
@@ -47,19 +69,15 @@ func GetEmailServiceProviderFromMX(mxRecords []string) string {
 	}
 
 	// Start with the last two parts as the potential root domain
-	potentialRoot := strings.Join(parts[numParts-2:], ".")
+	root := strings.Join(parts[numParts-2:], ".")
 
 	// Check if all MX records contain this potential root
 	for _, record := range mxRecords {
-		if !strings.HasSuffix(record, potentialRoot) {
+		if !strings.HasSuffix(record, root) {
 			// If not, return the last part only (TLD)
 			return parts[numParts-1]
 		}
 	}
-
-	root := strings.TrimSuffix(potentialRoot, ".com")
-	root = strings.TrimSuffix(root, ".eu")
-	root = strings.TrimSuffix(root, ".net")
 
 	return root
 }
