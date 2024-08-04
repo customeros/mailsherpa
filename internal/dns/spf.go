@@ -21,12 +21,7 @@ type AuthorizedSenders struct {
 	Webmail       []string
 }
 
-func GetAuthorizedSenders(email, knownSPFfilePath string) (AuthorizedSenders, error) {
-	knownProviders, err := getKnownProviders(knownSPFfilePath)
-	if err != nil {
-		return AuthorizedSenders{}, fmt.Errorf("error getting known providers list: %w", err)
-	}
-
+func GetAuthorizedSenders(email string, knownProviders KnownProviders) (AuthorizedSenders, error) {
 	spfRecord, err := getSPFRecord(email)
 	if err != nil {
 		return AuthorizedSenders{}, fmt.Errorf("error getting SPF record: %w", err)
@@ -55,7 +50,7 @@ func getSPFRecord(email string) (string, error) {
 	return "", fmt.Errorf("No SPF record found for domain %s", domain)
 }
 
-func processIncludes(spfRecord string, knownProviders Domain) AuthorizedSenders {
+func processIncludes(spfRecord string, knownProviders KnownProviders) AuthorizedSenders {
 	var senders AuthorizedSenders
 
 	includes := regexp.MustCompile(`include:([^\s]+)`).FindAllStringSubmatch(spfRecord, -1)
@@ -86,7 +81,7 @@ func processIncludes(spfRecord string, knownProviders Domain) AuthorizedSenders 
 			case "webmail":
 				senders.Webmail = append(senders.Webmail, provider.Name)
 			default:
-				log.Printf("'%s' for provider '%s' is unrecognized in known_email_providers.toml", provider.Type, provider.Name)
+				log.Printf("'%s' for provider '%s' is unrecognized, please add to known_email_providers.toml", provider.Type, provider.Name)
 			}
 		} else {
 			log.Printf("'%s' not found in known_email_providers.toml", includeDomain)

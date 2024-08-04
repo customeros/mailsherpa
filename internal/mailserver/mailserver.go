@@ -1,4 +1,4 @@
-package smpt
+package mailserver
 
 import (
 	"bufio"
@@ -10,12 +10,12 @@ import (
 
 	"golang.org/x/net/proxy"
 
-	"github.com/customeros/mailhawk/internal/mx"
+	"github.com/customeros/mailhawk/internal/dns"
 )
 
 type SMPTValidation struct {
-	canConnectSmtp bool
-	inboxFull      bool
+	CanConnectSmtp bool
+	InboxFull      bool
 	SMTPError      string
 }
 
@@ -30,7 +30,7 @@ func VerifyEmailAddress(email, fromDomain, fromEmail string, proxy ProxySetup) (
 	results := SMPTValidation{}
 	var isVerified bool
 
-	mxServers, err := mx.GetMXRecordsForEmail(email)
+	mxServers, err := dns.GetMXRecordsForEmail(email)
 	if err != nil {
 		return false, results, err
 	}
@@ -160,57 +160,57 @@ func sendRCPTTO(conn net.Conn, smtpClient *bufio.Reader, emailToValidate string)
 
 	switch respCode {
 	case "250":
-		results.canConnectSmtp = true
+		results.CanConnectSmtp = true
 		return true, results, nil
 	case "251":
-		results.canConnectSmtp = true
+		results.CanConnectSmtp = true
 		return true, results, nil
 	case "450":
-		results.canConnectSmtp = true
+		results.CanConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
 		return false, results, nil
 	case "451":
-		results.canConnectSmtp = true
+		results.CanConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
 		return false, results, nil
 	case "452":
-		results.canConnectSmtp = true
+		results.CanConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
 		return false, results, nil
 	case "503":
-		results.canConnectSmtp = true
+		results.CanConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
 		return false, results, nil
 	case "550":
-		results.canConnectSmtp = true
+		results.CanConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
 		return false, results, nil
 	case "551":
-		results.canConnectSmtp = true
+		results.CanConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
 		return false, results, nil
 	case "552":
-		results.inboxFull = true
-		results.canConnectSmtp = true
+		results.InboxFull = true
+		results.CanConnectSmtp = true
 		return false, results, nil
 	case "553":
-		results.canConnectSmtp = true
+		results.CanConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
 		return false, results, nil
 	case "554":
-		results.canConnectSmtp = true
+		results.CanConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
 		return false, results, nil
 	default:
-		results.canConnectSmtp = true
+		results.CanConnectSmtp = true
 		error := fmt.Sprintf("%s", resp)
 		results.SMTPError = error
 		return false, results, nil

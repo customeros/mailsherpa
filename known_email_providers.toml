@@ -18,6 +18,16 @@ spf = "include:spf.barracudanetworks.com"
 name = "barracuda"
 type = "security"
 
+["basecamp.com"]
+spf = "_spf.basecamp.com"
+name = "hey"
+type = "enterprise"
+
+["bluesnap.com"]
+spf = "_ae.bluesnap.com"
+name = "bluesnap"
+type = "finance"
+
 ["cmail.com"]
 spf = "include:cmail*.com"
 name = "campaign monitor"
@@ -32,6 +42,11 @@ type = "marketing"
 spf = "include:spf.daum.net"
 name = "daum"
 type = "webmail"
+
+["docebosaas.com"]
+spf = "docebosaas.com"
+name = "docebo"
+type = "learning"
 
 ["dreamhost.com"]
 spf = "include:spf.dreamhost.com"
@@ -88,6 +103,11 @@ spf = "include:spf.hetzner.com"
 name = "hetzner"
 type = "hosting"
 
+["hey.com"]
+spf = "_spf.basecamp.com"
+name = "hey"
+type = "enterprise"
+
 ["hostedemail.com"]
 spf = "include:_spf.hostedemail.com"
 name = "tucows"
@@ -123,6 +143,11 @@ spf = "_spf.intacct.com"
 name = "sage intacct"
 type = "finance"
 
+["intercom.io"]
+spf = "spf.mail.intercom.io"
+name = "intercom"
+type = "support"
+
 ["intermedia.net"]
 spf = "include:spf.intermedia.net"
 name = "intermedia"
@@ -132,6 +157,11 @@ type = "hosting"
 spf = "include:spf.ionos.com"
 name = "ionos"
 type = "hosting"
+
+["kayako.com"]
+spf = "email1.kayako.com"
+name = "kayako"
+type = "support"
 
 ["klaviyomail.com"]
 spf = "include:spf.klaviyomail.com"
@@ -222,6 +252,11 @@ type = "hosting"
 spf = "include:_netblocks.mimecast.com"
 name = "mimecast"
 type = "security"
+
+["mlsend.com"]
+spf = "_spf.mlsend.com"
+name = "mailerlite"
+type = "marketing"
 
 ["mtasv.net"]
 spf = "include:spf.mtasv.net"
@@ -368,6 +403,11 @@ spf = "include:spf.tutanota.de"
 name = "tutanota"
 type = "webmail"
 
+["vas-hosting.cz"]
+spf = "_spf1.vas-hosting.cz"
+name = "vas hosting"
+type = "hosting"
+
 ["web.de"]
 spf = "include:spf.web.de"
 name = "webde"
@@ -375,6 +415,11 @@ type = "webmail"
 
 ["yahoo.com"]
 spf = "include:spf.mail.yahoo.com"
+name = "yahoo"
+type = "webmail"
+
+["yahoodns.net"]
+spf = "mta5.am0.yahoodns.net"
 name = "yahoo"
 type = "webmail"
 
@@ -387,6 +432,11 @@ type = "webmail"
 spf = "include:_spf.yandex.ru"
 name = "yandex"
 type = "webmail"
+
+["zendesk.com"]
+spf = "mail.zendesk.com"
+name = "zendesk"
+type = "support"
 
 ["zimbra.com"]
 spf = "include:spf.zimbra.com"
