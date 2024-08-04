@@ -94,7 +94,7 @@ func buildResponse(syntax validate.SyntaxValidation, domain validate.DomainValid
 		isRisky = true
 	}
 
-	fmt.Println("isDelverable:", email.IsDeliverable)
+	fmt.Println("isDeliverable:", email.IsDeliverable)
 	fmt.Println("isValidSyntax:", syntax.IsValid)
 	fmt.Println("provider:", domain.Provider)
 	fmt.Println("isRisky:", isRisky)
