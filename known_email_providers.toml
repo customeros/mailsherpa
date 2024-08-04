@@ -1,0 +1,404 @@
+["163.com"]
+spf = "include:spf.163.com"
+name = "netease"
+type = "webmail"
+
+["alimail.com"]
+spf = "include:spf.alimail.com"
+name = "alibabamail"
+type = "enterprise"
+
+["amazonses.com"]
+spf = "include:amazonses.com"
+name = "amazon ses"
+type = "transactional"
+
+["barracudanetworks.com"]
+spf = "include:spf.barracudanetworks.com"
+name = "barracuda"
+type = "security"
+
+["cmail.com"]
+spf = "include:cmail*.com"
+name = "campaign monitor"
+type = "marketing"
+
+["constantcontact.com"]
+spf = "include:spf.constantcontact.com"
+name = "constant contact"
+type = "marketing"
+
+["daum.net"]
+spf = "include:spf.daum.net"
+name = "daum"
+type = "webmail"
+
+["dreamhost.com"]
+spf = "include:spf.dreamhost.com"
+name = "dreamhost"
+type = "hosting"
+
+["egress.com"]
+spf = "include:spf.egress.com"
+name = "egress"
+type = "security"
+
+["elasticemail.com"]
+spf = "include:elasticemail.com"
+name = "elasticemail"
+type = "transactional"
+
+["emailsrvr.com"]
+spf = "include:emailsrvr.com"
+name = "rackspace"
+type = "hosting"
+
+["forcepoint.com"]
+spf = "include:spf.forcepoint.com"
+name = "forcepoint"
+type = "security"
+
+["frontapp.com"]
+spf = "include:spf.frontapp.com"
+name = "front"
+type = "support"
+
+["gmx.net"]
+spf = "include:spf.gmx.net"
+name = "gmx"
+type = "webmail"
+
+["google.com"]
+spf = "include:_spf.google.com"
+name = "google workspace"
+type = "enterprise"
+
+["greathorn.com"]
+spf = "include:spf.greathorn.com"
+name = "greathorn"
+type = "security"
+
+["helpscout.net"]
+spf = "include:spf.helpscout.net"
+name = "helpscout"
+type = "support"
+
+["hetzner.com"]
+spf = "include:spf.hetzner.com"
+name = "hetzner"
+type = "hosting"
+
+["hostedemail.com"]
+spf = "include:_spf.hostedemail.com"
+name = "tucows"
+type = "hosting"
+
+["hubspot.net"]
+spf = "include:hubspot.net"
+name = "hubspot"
+type = "marketing"
+
+["hubspotemail.net"]
+spf = "include:*.spf07.hubspotemail.net"
+name = "hubspot"
+type = "marketing"
+
+["hushmail.com"]
+spf = "include:spf.hushmail.com"
+name = "hushmail"
+type = "webmail"
+
+["icloud.com"]
+spf = "include:icloud.com"
+name = "icloud"
+type = "webmail"
+
+["infomaniak.com"]
+spf = "include:spf.infomaniak.com"
+name = "infomaniak"
+type = "hosting"
+
+["intacct.com"]
+spf = "_spf.intacct.com"
+name = "sage intacct"
+type = "finance"
+
+["intermedia.net"]
+spf = "include:spf.intermedia.net"
+name = "intermedia"
+type = "hosting"
+
+["ionos.com"]
+spf = "include:spf.ionos.com"
+name = "ionos"
+type = "hosting"
+
+["klaviyomail.com"]
+spf = "include:spf.klaviyomail.com"
+name = "klaviyo"
+type = "marketing"
+
+["mail.ru"]
+spf = "include:_spf.mail.ru"
+name = "mailru"
+type = "webmail"
+
+["mailbox.org"]
+spf = "include:_spf.mailbox.org"
+name = "mailbox.org"
+type = "webmail"
+
+["mailchannels.net"]
+spf = "include:spf.mailchannels.net"
+name = "mailchannels"
+type = "transactional"
+
+["mailchimp.com"]
+spf = "include:spf.mailchimp.com"
+name = "mailchimp"
+type = "marketing"
+
+["mailcow.email"]
+spf = "include:spf.mailcow.email"
+name = "mailcow"
+type = "hosting"
+
+["mailerlite.com"]
+spf = "include:spf.mailerlite.com"
+name = "mailerlite"
+type = "marketing"
+
+["mailfence.com"]
+spf = "include:spf.mailfence.com"
+name = "mailfence"
+type = "webmail"
+
+["mailgun.org"]
+spf = "include:mailgun.org"
+name = "mailgun"
+type = "transactional"
+
+["mailhostbox.com"]
+spf = "include:_spf.mailhostbox.com"
+name = "mailhostbox"
+type = "hosting"
+
+["mailjet.com"]
+spf = "include:spf.mailjet.com"
+name = "mailjet"
+type = "transactional"
+
+["mailtrap.io"]
+spf = "include:spf.mailtrap.io"
+name = "mailtrap"
+type = "transactional"
+
+["mandrillapp.com"]
+spf = "include:spf.mandrillapp.com"
+name = "mandrill"
+type = "transactional"
+
+["mcsv.net"]
+spf = "include:servers.mcsv.net"
+name = "mailchimp"
+type = "marketing"
+
+["messagelabs.com"]
+spf = "include:spf.messagelabs.com"
+name = "broadcom"
+type = "security"
+
+["messagingengine.com"]
+spf = "include:spf.messagingengine.com"
+name = "fastmail"
+type = "hosting"
+
+["migadu.com"]
+spf = "include:spf.migadu.com"
+name = "migadu"
+type = "hosting"
+
+["mimecast.com"]
+spf = "include:_netblocks.mimecast.com"
+name = "mimecast"
+type = "security"
+
+["mtasv.net"]
+spf = "include:spf.mtasv.net"
+name = "postmark"
+type = "transactional"
+
+["mxhichina.com"]
+spf = "include:spf.mxhichina.com"
+name = "alibabamail"
+type = "enterprise"
+
+["naver.com"]
+spf = "include:_spf.naver.com"
+name = "naver"
+type = "webmail"
+
+["outlook.com"]
+spf = "include:spf.protection.outlook.com"
+name = "outlook"
+type = "enterprise"
+
+["ovh.com"]
+spf = "include:mx.ovh.com"
+name = "ovh"
+type = "hosting"
+
+["posteo.de"]
+spf = "include:spf.posteo.de"
+name = "posteo"
+type = "webmail"
+
+["pphosted.com"]
+spf = "include:pphosted.com"
+name = "proofpoint"
+type = "security"
+
+["privateemail.com"]
+spf = "include:spf.privateemail.com"
+name = "namecheap"
+type = "hosting"
+
+["protonmail.ch"]
+spf = "include:_spf.protonmail.ch"
+name = "protonmail"
+type = "webmail"
+
+["qq.com"]
+spf = "include:spf.qq.com"
+name = "tencent"
+type = "webmail"
+
+["reflexion.net"]
+spf = "include:spf.reflexion.net"
+name = "sophos"
+type = "security"
+
+["res.cisco.com"]
+spf = "include:res.cisco.com"
+name = "cisco"
+type = "security"
+
+["retarus.com"]
+spf = "include:spf.retarus.com"
+name = "retarus"
+type = "transactional"
+
+["runbox.com"]
+spf = "include:spf.runbox.com"
+name = "runbox"
+type = "webmail"
+
+["salesforce.com"]
+spf = "include:_spf.salesforce.com"
+name = "salesforce"
+type = "support"
+
+["secondstreetmail.com"]
+spf = "include:secondstreetmail.com"
+name = "uplandsoftware"
+type = "marketing"
+
+["secureserver.net"]
+spf = "include:secureserver.net"
+name = "godaddy"
+type = "hosting"
+
+["sendinblue.com"]
+spf = "include:spf.sendinblue.com"
+name = "sendinblue"
+type = "marketing"
+
+["sendgrid.net"]
+spf = "include:sendgrid.net"
+name = "sendgrid"
+type = "transactional"
+
+["serverdata.net"]
+spf = "include:spf.serverdata.net"
+name = "sherweb"
+type = "hosting"
+
+["simplyspamfree.com"]
+spf = "include:_spf.simplyspamfree.com"
+name = "spamexperts"
+type = "security"
+
+["sina.com"]
+spf = "include:spf.sina.com"
+name = "sinamail"
+type = "webmail"
+
+["smtp2go.com"]
+spf = "include:spf.smtp2go.com"
+name = "smtp2go"
+type = "transactional"
+
+["sohu.com"]
+spf = "include:spf.sohu.com"
+name = "sohumail"
+type = "webmail"
+
+["spamexperts.com"]
+spf = "include:spf.spamexperts.com"
+name = "solarwinds"
+type = "security"
+
+["sparkpostmail.com"]
+spf = "include:sparkpostmail.com"
+name = "sparkpost"
+type = "transactional"
+
+["stackmail.com"]
+spf = "include:_spf.stackmail.com"
+name = "steadfast"
+type = "hosting"
+
+["trendmicro.com"]
+spf = "include:spf.trendmicro.com"
+name = "trendmicro"
+type = "security"
+
+["tutanota.de"]
+spf = "include:spf.tutanota.de"
+name = "tutanota"
+type = "webmail"
+
+["web.de"]
+spf = "include:spf.web.de"
+name = "webde"
+type = "webmail"
+
+["yahoo.com"]
+spf = "include:spf.mail.yahoo.com"
+name = "yahoo"
+type = "webmail"
+
+["yandex.net"]
+spf = "include:spf.yandex.net"
+name = "yandex"
+type = "webmail"
+
+["yandex.ru"]
+spf = "include:_spf.yandex.ru"
+name = "yandex"
+type = "webmail"
+
+["zimbra.com"]
+spf = "include:spf.zimbra.com"
+name = "zimbra"
+type = "hosting"
+
+["zixmail.net"]
+spf = "include:zixmail.net"
+name = "zix"
+type = "security"
+
+["zoho.com"]
+spf = "include:zoho.com"
+name = "zoho"
+type = "enterprise"

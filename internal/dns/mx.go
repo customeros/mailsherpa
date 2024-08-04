@@ -1,4 +1,4 @@
-package mx
+package dns
 
 import (
 	"fmt"
@@ -62,10 +62,6 @@ func GetEmailServiceProviderFromMX(mxRecords []string) string {
 	root = strings.TrimSuffix(root, ".net")
 
 	return root
-}
-
-func IsFirewall(emailServiceProvider string) string {
-	return Firewalls[emailServiceProvider]
 }
 
 func getRawMXRecords(email string) ([]*net.MX, error) {
