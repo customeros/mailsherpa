@@ -72,6 +72,12 @@ func ValidateDomain(validationRequest EmailValidationRequest, knownProviders dns
 		log.Println("Error getting authorized senders from spf records: %w", err)
 	}
 	results.AuthorizedSenders = authorizedSenders
+	if results.Provider == "" {
+		results.Provider = results.AuthorizedSenders.Enterprise[0]
+	}
+	if results.Provider == "" {
+		results.Provider = results.AuthorizedSenders.Webmail[0]
+	}
 
 	if len(results.AuthorizedSenders.Security) > 0 {
 		results.IsFirewalled = true
@@ -98,10 +104,6 @@ func ValidateEmail(validationRequest EmailValidationRequest, knownProviders dns.
 		log.Printf("Error executing role account check: %v", err)
 	}
 	results.IsRoleAccount = isRoleAccount
-
-	if isFreeEmail && !validationRequest.ValidateFreeAccounts {
-		return results
-	}
 
 	if isRoleAccount && !validationRequest.ValidateRoleAccounts {
 		return results

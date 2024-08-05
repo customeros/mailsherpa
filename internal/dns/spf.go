@@ -15,10 +15,12 @@ type AuthorizedSenders struct {
 	Finance       []string
 	Hosting       []string
 	Marketing     []string
+	Sales         []string
 	Security      []string
 	Support       []string
 	Transactional []string
 	Webmail       []string
+	Other         []string
 }
 
 func GetAuthorizedSenders(email string, knownProviders KnownProviders) (AuthorizedSenders, error) {
@@ -65,21 +67,45 @@ func processIncludes(spfRecord string, knownProviders KnownProviders) Authorized
 		if exists {
 			switch provider.Type {
 			case "enterprise":
-				senders.Enterprise = append(senders.Enterprise, provider.Name)
+				if !contains(senders.Enterprise, provider.Name) {
+					senders.Enterprise = append(senders.Enterprise, provider.Name)
+				}
 			case "finance":
-				senders.Finance = append(senders.Finance, provider.Name)
+				if !contains(senders.Finance, provider.Name) {
+					senders.Finance = append(senders.Finance, provider.Name)
+				}
 			case "hosting":
-				senders.Hosting = append(senders.Hosting, provider.Name)
+				if !contains(senders.Hosting, provider.Name) {
+					senders.Hosting = append(senders.Hosting, provider.Name)
+				}
 			case "marketing":
-				senders.Marketing = append(senders.Marketing, provider.Name)
+				if !contains(senders.Marketing, provider.Name) {
+					senders.Marketing = append(senders.Marketing, provider.Name)
+				}
+			case "sales":
+				if !contains(senders.Sales, provider.Name) {
+					senders.Sales = append(senders.Sales, provider.Name)
+				}
 			case "security":
-				senders.Security = append(senders.Security, provider.Name)
+				if !contains(senders.Security, provider.Name) {
+					senders.Security = append(senders.Security, provider.Name)
+				}
 			case "support":
-				senders.Support = append(senders.Support, provider.Name)
+				if !contains(senders.Support, provider.Name) {
+					senders.Support = append(senders.Support, provider.Name)
+				}
 			case "transactional":
-				senders.Transactional = append(senders.Transactional, provider.Name)
+				if !contains(senders.Transactional, provider.Name) {
+					senders.Transactional = append(senders.Transactional, provider.Name)
+				}
 			case "webmail":
-				senders.Webmail = append(senders.Webmail, provider.Name)
+				if !contains(senders.Webmail, provider.Name) {
+					senders.Webmail = append(senders.Webmail, provider.Name)
+				}
+			case "other":
+				if !contains(senders.Other, provider.Name) {
+					senders.Other = append(senders.Other, provider.Name)
+				}
 			default:
 				log.Printf("'%s' for provider '%s' is unrecognized, please add to known_email_providers.toml", provider.Type, provider.Name)
 			}
@@ -116,4 +142,13 @@ func extractRootDomain(fullDomain string) string {
 
 	// Otherwise, return just the second-level domain and TLD
 	return strings.Join(parts[secondLevelDomainIndex:], ".")
+}
+
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }

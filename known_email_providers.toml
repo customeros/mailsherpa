@@ -13,6 +13,11 @@ spf = "include:amazonses.com"
 name = "amazon ses"
 type = "transactional"
 
+["areait.lv"]
+spf = "include:spf.server42.areait.lv"
+name = "area it"
+type = "hosting"
+
 ["barracudanetworks.com"]
 spf = "include:spf.barracudanetworks.com"
 name = "barracuda"
@@ -33,6 +38,11 @@ spf = "include:cmail*.com"
 name = "campaign monitor"
 type = "marketing"
 
+["commented.io"]
+spf = "include:spf.commented.io"
+name = "commented.io"
+type = "other"
+
 ["constantcontact.com"]
 spf = "include:spf.constantcontact.com"
 name = "constant contact"
@@ -46,7 +56,7 @@ type = "webmail"
 ["docebosaas.com"]
 spf = "docebosaas.com"
 name = "docebo"
-type = "learning"
+type = "other"
 
 ["dreamhost.com"]
 spf = "include:spf.dreamhost.com"
@@ -68,10 +78,25 @@ spf = "include:emailsrvr.com"
 name = "rackspace"
 type = "hosting"
 
+["emsd1.com"]
+spf = "include:spf.emsd1.com"
+name = "active campaign"
+type = "marketing"
+
 ["forcepoint.com"]
 spf = "include:spf.forcepoint.com"
 name = "forcepoint"
 type = "security"
+
+["freshemail.io"]
+spf = "include:spf.freshemail.io"
+name = "freshworks"
+type = "support"
+
+["freshproposals.com"]
+spf = "include:spf.freshproposals.com"
+name = "freshproposals"
+type = "sales"
 
 ["frontapp.com"]
 spf = "include:spf.frontapp.com"
@@ -95,6 +120,11 @@ type = "security"
 
 ["helpscout.net"]
 spf = "include:spf.helpscout.net"
+name = "helpscout"
+type = "support"
+
+["helpscoutemail.com"]
+spf = "include:spf.helpscoutemail.com"
 name = "helpscout"
 type = "support"
 
@@ -137,6 +167,11 @@ type = "webmail"
 spf = "include:spf.infomaniak.com"
 name = "infomaniak"
 type = "hosting"
+
+["infusionmail.com"]
+spf = "include:spf.infustionmail.com"
+name = "keap"
+type = "sales"
 
 ["intacct.com"]
 spf = "_spf.intacct.com"
@@ -196,6 +231,11 @@ type = "hosting"
 ["mailerlite.com"]
 spf = "include:spf.mailerlite.com"
 name = "mailerlite"
+type = "marketing"
+
+["mailersend.net"]
+spf = "include:spf.mailersend.net"
+name = "mailersend"
 type = "marketing"
 
 ["mailfence.com"]
@@ -331,7 +371,7 @@ type = "webmail"
 ["salesforce.com"]
 spf = "include:_spf.salesforce.com"
 name = "salesforce"
-type = "support"
+type = "sales"
 
 ["secondstreetmail.com"]
 spf = "include:secondstreetmail.com"
@@ -392,6 +432,11 @@ type = "transactional"
 spf = "include:_spf.stackmail.com"
 name = "steadfast"
 type = "hosting"
+
+["stripe.com"]
+spf = "include:spf.stripe.com"
+name = "stripe"
+type = "finance"
 
 ["trendmicro.com"]
 spf = "include:spf.trendmicro.com"
