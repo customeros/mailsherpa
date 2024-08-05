@@ -1,4 +1,4 @@
-# Mailhawk Email Validation
+# MailSherpa Email Validation
 
 ### Enhancements
 

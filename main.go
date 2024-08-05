@@ -4,15 +4,29 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
-	"runtime"
+	"strings"
+
+	"github.com/lucasepe/codename"
 
 	"github.com/customeros/mailhawk/internal/dns"
 	"github.com/customeros/mailhawk/internal/validate"
 )
 
 func main() {
-	knownProviders, freeEmails, roleAccounts := getConfig()
+	knownProviders, err := dns.GetKnownProviders("./known_email_providers.toml")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	freeEmails, err := validate.GetFreeEmailList("./free_emails.toml")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	roleAccounts, err := validate.GetRoleAccounts("./role_emails.toml")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	email := parseArgs()
 
@@ -20,8 +34,8 @@ func main() {
 	request := validate.EmailValidationRequest{
 		Email:            email,
 		FromDomain:       "hubspot.com",
-		FromEmail:        "harry@hubspot.com",
-		CatchAllTestUser: "blueelephantpurpledinosaur",
+		FromEmail:        "yamini.rangan@hubspot.com",
+		CatchAllTestUser: generateCatchAllUsername(),
 	}
 
 	syntaxResults := validate.ValidateEmailSyntax(email)
@@ -39,53 +53,13 @@ func parseArgs() string {
 	return email
 }
 
-func getConfig() (dns.KnownProviders, validate.FreeEmails, validate.RoleAccounts) {
-	knownProvidersPath, err := getConfigPath("known_email_providers.toml")
+func generateCatchAllUsername() string {
+	rng, err := codename.DefaultRNG()
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-
-	knownProviders, err := dns.GetKnownProviders(knownProvidersPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	freeEmailsPath, err := getConfigPath("free_emails.toml")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	freeEmails, err := validate.GetFreeEmailList(freeEmailsPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	roleAccountsPath, err := getConfigPath("role_emails.toml")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	roleAccounts, err := validate.GetRoleAccounts(roleAccountsPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return knownProviders, freeEmails, roleAccounts
-}
-
-func getConfigPath(configFilename string) (string, error) {
-	// Get the directory of the current file
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		return "", fmt.Errorf("error getting current file path")
-	}
-
-	// Navigate up to the project root (where go.mod is located)
-	projectRoot := filepath.Dir(filepath.Dir(filename))
-
-	// Construct the path to the config file
-	configPath := filepath.Join(projectRoot, configFilename)
-
-	return configPath, nil
+	name := codename.Generate(rng, 0)
+	return strings.ReplaceAll(name, "-", "")
 }
 
 func buildResponse(syntax validate.SyntaxValidation, domain validate.DomainValidation, email validate.EmailValidatation) {
