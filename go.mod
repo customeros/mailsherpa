@@ -1,4 +1,4 @@
-module github.com/customeros/mailhawk
+module github.com/customeros/mailsherpa
 
 go 1.22.3
 
