@@ -7,7 +7,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/customeros/mailhawk/internal/syntax"
+	"github.com/customeros/mailsherpa/internal/syntax"
 )
 
 type FreeEmails struct {

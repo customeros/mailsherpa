@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/customeros/mailhawk/internal/syntax"
+	"github.com/customeros/mailsherpa/internal/syntax"
 )
 
 func GetEmailProviderFromMx(email string, knownProviders KnownProviders) (string, error) {
