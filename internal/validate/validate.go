@@ -72,10 +72,10 @@ func ValidateDomain(validationRequest EmailValidationRequest, knownProviders dns
 		log.Println("Error getting authorized senders from spf records: %w", err)
 	}
 	results.AuthorizedSenders = authorizedSenders
-	if results.Provider == "" {
+	if results.Provider == "" && len(results.AuthorizedSenders.Enterprise) > 0 {
 		results.Provider = results.AuthorizedSenders.Enterprise[0]
 	}
-	if results.Provider == "" {
+	if results.Provider == "" && len(results.AuthorizedSenders.Webmail) > 0 {
 		results.Provider = results.AuthorizedSenders.Webmail[0]
 	}
 

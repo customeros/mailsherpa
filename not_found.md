@@ -1,4 +1,7 @@
 ignitionapp.com
+mx1.mtaroutes.com
+zcsend.net
+bmsend.com
 emlsend.com
 mktomail.com
 stspg-customer.com
