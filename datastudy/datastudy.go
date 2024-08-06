@@ -7,7 +7,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/lucasepe/codename"
 
@@ -128,7 +127,8 @@ func RunDataStudy(inputFilePath, outputFilePath string) {
 	var output []DomainResponse
 	catchAllResults := make(map[string]bool)
 
-	for _, email := range testEmails[0:5] {
+	for v, email := range testEmails {
+		fmt.Println(v)
 
 		request := validate.EmailValidationRequest{
 			Email:            email,
@@ -173,12 +173,8 @@ func RunDataStudy(inputFilePath, outputFilePath string) {
 			smtpError:     emailResults.SmtpError,
 		}
 		output = append(output, results)
-		time.Sleep(1 * time.Second)
 	}
 	writeResultsFile(output, outputFilePath)
-	for k, v := range catchAllResults {
-		fmt.Printf(k, v)
-	}
 }
 
 func generateCatchAllUsername() string {
