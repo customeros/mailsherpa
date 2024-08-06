@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/customeros/mailhawk/internal/syntax"
+	"github.com/customeros/mailsherpa/internal/syntax"
 )
 
 type AuthorizedSenders struct {

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/customeros/mailhawk/internal/dns"
-	"github.com/customeros/mailhawk/internal/mailserver"
-	"github.com/customeros/mailhawk/internal/syntax"
+	"github.com/customeros/mailsherpa/internal/dns"
+	"github.com/customeros/mailsherpa/internal/mailserver"
+	"github.com/customeros/mailsherpa/internal/syntax"
 )
 
 type EmailValidationRequest struct {
@@ -58,7 +58,7 @@ func ValidateEmailSyntax(email string) SyntaxValidation {
 	return results
 }
 
-func ValidateDomain(validationRequest EmailValidationRequest, knownProviders dns.KnownProviders) DomainValidation {
+func ValidateDomain(validationRequest EmailValidationRequest, knownProviders dns.KnownProviders, validateCatchAll bool) DomainValidation {
 	var results DomainValidation
 
 	provider, err := dns.GetEmailProviderFromMx(validationRequest.Email, knownProviders)
@@ -83,9 +83,12 @@ func ValidateDomain(validationRequest EmailValidationRequest, knownProviders dns
 		results.IsFirewalled = true
 	}
 
-	var smptResults mailserver.SMPTValidation
-	results.IsCatchAll, smptResults = catchAllTest(validationRequest)
-	results.CanConnectSMTP = smptResults.CanConnectSmtp
+	if validateCatchAll {
+		var smptResults mailserver.SMPTValidation
+		results.IsCatchAll, smptResults = catchAllTest(validationRequest)
+		results.CanConnectSMTP = smptResults.CanConnectSmtp
+
+	}
 
 	return results
 }

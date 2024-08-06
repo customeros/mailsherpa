@@ -12,3 +12,6 @@ mail.freelo.io
 revgenius.com
 mktomail.com
 transmail.net
+mimecastprotect.com
+tacklephishing.com
+shopify.com

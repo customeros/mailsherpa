@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/net/proxy"
 
-	"github.com/customeros/mailhawk/internal/dns"
+	"github.com/customeros/mailsherpa/internal/dns"
 )
 
 type SMPTValidation struct {

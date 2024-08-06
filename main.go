@@ -8,11 +8,16 @@ import (
 
 	"github.com/lucasepe/codename"
 
-	"github.com/customeros/mailhawk/internal/dns"
-	"github.com/customeros/mailhawk/internal/validate"
+	"github.com/customeros/mailsherpa/datastudy"
+	"github.com/customeros/mailsherpa/internal/dns"
+	"github.com/customeros/mailsherpa/internal/validate"
 )
 
 func main() {
+	datastudy.RunDataStudy("/Users/mbrown/downloads/bettercontact_test.csv", "/Users/mbrown/desktop/bettercontact_results.csv")
+}
+
+func main_old() {
 	knownProviders, err := dns.GetKnownProviders("./known_email_providers.toml")
 	if err != nil {
 		log.Fatal(err)
@@ -39,7 +44,7 @@ func main() {
 	}
 
 	syntaxResults := validate.ValidateEmailSyntax(email)
-	domainResults := validate.ValidateDomain(request, knownProviders)
+	domainResults := validate.ValidateDomain(request, knownProviders, true)
 	emailResults := validate.ValidateEmail(request, knownProviders, freeEmails, roleAccounts)
 	buildResponse(syntaxResults, domainResults, emailResults)
 }
