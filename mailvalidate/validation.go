@@ -22,6 +22,7 @@ type EmailValidationRequest struct {
 
 type DomainValidation struct {
 	Provider          string
+	Firewall          string
 	AuthorizedSenders dns.AuthorizedSenders
 	IsFirewalled      bool
 	IsCatchAll        bool
@@ -64,7 +65,7 @@ func ValidateDomain(validationRequest EmailValidationRequest, validateCatchAll b
 	if err != nil {
 		log.Fatal(err)
 	}
-	return ValidateDomainWithCustomKnownProviders(validationRequest, knownProviders, validateCatchAll)
+	return ValidateDomainWithCustomKnownProviders(validationRequest, *knownProviders, validateCatchAll)
 }
 
 func ValidateDomainWithCustomKnownProviders(validationRequest EmailValidationRequest, knownProviders dns.KnownProviders, validateCatchAll bool) (DomainValidation, error) {
@@ -79,20 +80,24 @@ func ValidateDomainWithCustomKnownProviders(validationRequest EmailValidationReq
 	}
 	results.Provider = provider
 
-	authorizedSenders, err := dns.GetAuthorizedSenders(validationRequest.Email, knownProviders)
+	authorizedSenders, err := dns.GetAuthorizedSenders(validationRequest.Email, &knownProviders)
 	if err != nil {
 		return results, errors.Wrap(err, "Error getting authorized senders from spf records")
 	}
 	results.AuthorizedSenders = authorizedSenders
-	if results.Provider == "" && len(results.AuthorizedSenders.Enterprise) > 0 {
+	if results.Provider == "unknown" && len(results.AuthorizedSenders.Enterprise) > 0 {
 		results.Provider = results.AuthorizedSenders.Enterprise[0]
 	}
-	if results.Provider == "" && len(results.AuthorizedSenders.Webmail) > 0 {
+	if results.Provider == "unknown" && len(results.AuthorizedSenders.Webmail) > 0 {
 		results.Provider = results.AuthorizedSenders.Webmail[0]
+	}
+	if results.Provider == "unknown" && len(results.AuthorizedSenders.Hosting) > 0 {
+		results.Provider = results.AuthorizedSenders.Hosting[0]
 	}
 
 	if len(results.AuthorizedSenders.Security) > 0 {
 		results.IsFirewalled = true
+		results.Firewall = results.AuthorizedSenders.Security[0]
 	}
 
 	if validateCatchAll {

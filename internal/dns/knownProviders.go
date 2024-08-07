@@ -9,16 +9,20 @@ import (
 //go:embed known_email_providers.toml
 var knownProvidersFile embed.FS
 
-type Provider struct {
-	SPF  string `toml:"spf"`
-	Name string `toml:"name"`
-	Type string `toml:"type"`
+type ProviderCategory struct {
+	Type    string     `toml:"type"`
+	Domains [][]string `toml:"domains"`
 }
 
-type KnownProviders map[string]Provider
+type KnownProviders struct {
+	Enterprise ProviderCategory `toml:"enterprise"`
+	Hosting    ProviderCategory `toml:"hosting"`
+	Webmail    ProviderCategory `toml:"webmail"`
+	Security   ProviderCategory `toml:"security"`
+}
 
-func GetKnownProviders() (KnownProviders, error) {
-	var domain KnownProviders
+func GetKnownProviders() (*KnownProviders, error) {
+	var providers KnownProviders
 
 	// Read the file
 	fileData, err := knownProvidersFile.ReadFile("known_email_providers.toml")
@@ -27,9 +31,35 @@ func GetKnownProviders() (KnownProviders, error) {
 	}
 
 	// Decode the TOML content
-	if err := toml.Unmarshal(fileData, &domain); err != nil {
+	if err := toml.Unmarshal(fileData, &providers); err != nil {
 		return nil, fmt.Errorf("error decoding TOML: %w", err)
 	}
 
-	return domain, nil
+	// Set the Type field for each category
+	providers.Enterprise.Type = "enterprise"
+	providers.Hosting.Type = "hosting"
+	providers.Webmail.Type = "webmail"
+	providers.Security.Type = "security"
+
+	return &providers, nil
+}
+
+// Helper function to get provider by domain
+func (kp *KnownProviders) GetProviderByDomain(domain string) (string, string) {
+	categories := []ProviderCategory{
+		kp.Enterprise,
+		kp.Hosting,
+		kp.Webmail,
+		kp.Security,
+	}
+
+	for _, category := range categories {
+		for _, provider := range category.Domains {
+			if provider[0] == domain {
+				return provider[1], category.Type
+			}
+		}
+	}
+
+	return "", ""
 }
