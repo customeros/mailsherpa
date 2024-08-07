@@ -64,6 +64,11 @@ func buildResponse(syntax mailvalidate.SyntaxValidation, domain mailvalidate.Dom
 	fmt.Println("Security:", domain.AuthorizedSenders.Security)
 	fmt.Println("Webmail:", domain.AuthorizedSenders.Webmail)
 	fmt.Println("")
-	fmt.Println("SMTP Errors")
-	fmt.Println(email.SmtpError)
+	fmt.Println("SMTP Response")
+	fmt.Println("Success:", email.SmtpSuccess)
+	fmt.Println("Retry:", email.RetryValidation)
+	fmt.Println(email.ResponseCode)
+	fmt.Println(email.ErrorCode)
+	fmt.Println(email.Description)
+	fmt.Println(email.SmtpResponse)
 }
