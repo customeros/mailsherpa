@@ -12,7 +12,7 @@ import (
 
 	"github.com/customeros/mailsherpa/internal/dns"
 	"github.com/customeros/mailsherpa/internal/syntax"
-	"github.com/customeros/mailsherpa/internal/validate"
+	"github.com/customeros/mailsherpa/validate"
 )
 
 type DomainResponse struct {
