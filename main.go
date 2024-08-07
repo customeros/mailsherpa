@@ -8,13 +8,12 @@ import (
 
 	"github.com/lucasepe/codename"
 
-	"github.com/customeros/mailsherpa/datastudy"
 	"github.com/customeros/mailsherpa/internal/dns"
-	"github.com/customeros/mailsherpa/internal/validate"
+	"github.com/customeros/mailsherpa/validate"
 )
 
 func main() {
-	datastudy.RunDataStudy("/Users/mbrown/downloads/bettercontact_test.csv", "/Users/mbrown/desktop/bettercontact_results.csv")
+	//datastudy.RunDataStudy("/Users/mbrown/downloads/test.csv", "/Users/mbrown/desktop/results.csv")
 }
 
 func main_old() {
