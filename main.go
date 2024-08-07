@@ -2,49 +2,32 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"github.com/customeros/mailsherpa/mailvalidate"
 	"os"
-	"strings"
-
-	"github.com/lucasepe/codename"
-
-	"github.com/customeros/mailsherpa/internal/dns"
-	"github.com/customeros/mailsherpa/validate"
 )
 
 func main() {
 	//datastudy.RunDataStudy("/Users/mbrown/downloads/test.csv", "/Users/mbrown/desktop/results.csv")
 }
 
-func main_old() {
-	knownProviders, err := dns.GetKnownProviders("./known_email_providers.toml")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	freeEmails, err := validate.GetFreeEmailList("./free_emails.toml")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	roleAccounts, err := validate.GetRoleAccounts("./role_emails.toml")
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func mainOld() {
 	email := parseArgs()
 
 	// build validation request
-	request := validate.EmailValidationRequest{
-		Email:            email,
-		FromDomain:       "hubspot.com",
-		FromEmail:        "yamini.rangan@hubspot.com",
-		CatchAllTestUser: generateCatchAllUsername(),
+	request := mailvalidate.EmailValidationRequest{
+		Email:      email,
+		FromDomain: "hubspot.com",
 	}
 
-	syntaxResults := validate.ValidateEmailSyntax(email)
-	domainResults := validate.ValidateDomain(request, knownProviders, true)
-	emailResults := validate.ValidateEmail(request, knownProviders, freeEmails, roleAccounts)
+	syntaxResults := mailvalidate.ValidateEmailSyntax(email)
+	domainResults, err := mailvalidate.ValidateDomain(request, true)
+	if err != nil {
+		fmt.Println(err)
+	}
+	emailResults, err := mailvalidate.ValidateEmail(request)
+	if err != nil {
+		fmt.Println(err)
+	}
 	buildResponse(syntaxResults, domainResults, emailResults)
 }
 
@@ -57,16 +40,7 @@ func parseArgs() string {
 	return email
 }
 
-func generateCatchAllUsername() string {
-	rng, err := codename.DefaultRNG()
-	if err != nil {
-		panic(err)
-	}
-	name := codename.Generate(rng, 0)
-	return strings.ReplaceAll(name, "-", "")
-}
-
-func buildResponse(syntax validate.SyntaxValidation, domain validate.DomainValidation, email validate.EmailValidatation) {
+func buildResponse(syntax mailvalidate.SyntaxValidation, domain mailvalidate.DomainValidation, email mailvalidate.EmailValidation) {
 	isRisky := false
 	if email.IsFreeAccount || email.IsRoleAccount || email.IsMailboxFull || domain.IsCatchAll || domain.IsFirewalled {
 		isRisky = true
