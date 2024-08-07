@@ -1,7 +1,8 @@
-package validate
+package mailvalidate
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"log"
 
 	"github.com/customeros/mailsherpa/internal/dns"
@@ -13,6 +14,7 @@ type EmailValidationRequest struct {
 	Email                string
 	FromDomain           string
 	FromEmail            string
+	GenerateFromEmail    bool
 	CatchAllTestUser     string
 	ValidateFreeAccounts bool
 	ValidateRoleAccounts bool
@@ -27,7 +29,7 @@ type DomainValidation struct {
 	CanConnectSMTP    bool
 }
 
-type EmailValidatation struct {
+type EmailValidation struct {
 	IsDeliverable bool
 	IsMailboxFull bool
 	IsRoleAccount bool
@@ -58,18 +60,29 @@ func ValidateEmailSyntax(email string) SyntaxValidation {
 	return results
 }
 
-func ValidateDomain(validationRequest EmailValidationRequest, knownProviders dns.KnownProviders, validateCatchAll bool) DomainValidation {
+func ValidateDomain(validationRequest EmailValidationRequest, validateCatchAll bool) (DomainValidation, error) {
+	knownProviders, err := dns.GetKnownProviders("../known_email_providers.toml")
+	if err != nil {
+		log.Fatal(err)
+	}
+	return ValidateDomainWithCustomKnownProviders(validationRequest, knownProviders, validateCatchAll)
+}
+
+func ValidateDomainWithCustomKnownProviders(validationRequest EmailValidationRequest, knownProviders dns.KnownProviders, validateCatchAll bool) (DomainValidation, error) {
 	var results DomainValidation
+	if err := validateRequest(&validationRequest); err != nil {
+		return results, errors.Wrap(err, "Invalid request")
+	}
 
 	provider, err := dns.GetEmailProviderFromMx(validationRequest.Email, knownProviders)
 	if err != nil {
-		log.Println("Error getting provider from MX records: %w", err)
+		return results, errors.Wrap(err, "Error getting provider from MX records")
 	}
 	results.Provider = provider
 
 	authorizedSenders, err := dns.GetAuthorizedSenders(validationRequest.Email, knownProviders)
 	if err != nil {
-		log.Println("Error getting authorized senders from spf records: %w", err)
+		return results, errors.Wrap(err, "Error getting authorized senders from spf records")
 	}
 	results.AuthorizedSenders = authorizedSenders
 	if results.Provider == "" && len(results.AuthorizedSenders.Enterprise) > 0 {
@@ -90,26 +103,39 @@ func ValidateDomain(validationRequest EmailValidationRequest, knownProviders dns
 
 	}
 
-	return results
+	return results, nil
 }
 
-func ValidateEmail(validationRequest EmailValidationRequest, knownProviders dns.KnownProviders, freeEmails FreeEmails, roleAccounts RoleAccounts) EmailValidatation {
-	var results EmailValidatation
+func ValidateEmail(validationRequest EmailValidationRequest) (EmailValidation, error) {
+	var results EmailValidation
+	if err := validateRequest(&validationRequest); err != nil {
+		return results, errors.Wrap(err, "Invalid request")
+	}
+
+	freeEmails, err := GetFreeEmailList("../free_emails.toml")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	roleAccounts, err := GetRoleAccounts("../role_emails.toml")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	isFreeEmail, err := IsFreeEmailCheck(validationRequest.Email, freeEmails)
 	if err != nil {
-		log.Printf("Error executing free email check: %v", err)
+		return results, errors.Wrap(err, "Error executing free email check")
 	}
 	results.IsFreeAccount = isFreeEmail
 
 	isRoleAccount, err := IsRoleAccountCheck(validationRequest.Email, roleAccounts)
 	if err != nil {
-		log.Printf("Error executing role account check: %v", err)
+		return results, errors.Wrap(err, "Error executing role account check")
 	}
 	results.IsRoleAccount = isRoleAccount
 
 	if isRoleAccount && !validationRequest.ValidateRoleAccounts {
-		return results
+		return results, nil
 	}
 
 	isVerified, smtpValidation, err := mailserver.VerifyEmailAddress(
@@ -119,12 +145,12 @@ func ValidateEmail(validationRequest EmailValidationRequest, knownProviders dns.
 		validationRequest.Proxy,
 	)
 	if err != nil {
-		log.Printf("Error validating email via SMTP: %v", err)
+		return results, errors.Wrap(err, "Error validating email via SMTP")
 	}
 	results.IsDeliverable = isVerified
 	results.IsMailboxFull = smtpValidation.InboxFull
 	results.SmtpError = smtpValidation.SMTPError
-	return results
+	return results, nil
 }
 
 func catchAllTest(validationRequest EmailValidationRequest) (bool, mailserver.SMPTValidation) {
@@ -147,4 +173,21 @@ func catchAllTest(validationRequest EmailValidationRequest) (bool, mailserver.SM
 	}
 
 	return isVerified, smtpValidation
+}
+
+func validateRequest(request *EmailValidationRequest) error {
+	if request.Email == "" {
+		return errors.New("Email is required")
+	}
+	if request.FromDomain == "" {
+		return errors.New("FromDomain is required")
+	}
+	if request.FromEmail == "" {
+		firstName, lastName := generateNames()
+		request.FromEmail = fmt.Sprintf("%s.%s@%s", firstName, lastName, request.FromDomain)
+	}
+	if request.CatchAllTestUser == "" {
+		request.CatchAllTestUser = generateCatchAllUsername()
+	}
+	return nil
 }

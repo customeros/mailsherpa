@@ -12,7 +12,6 @@ import (
 
 	"github.com/customeros/mailsherpa/internal/dns"
 	"github.com/customeros/mailsherpa/internal/syntax"
-	"github.com/customeros/mailsherpa/validate"
 )
 
 type DomainResponse struct {
@@ -109,12 +108,12 @@ func RunDataStudy(inputFilePath, outputFilePath string) {
 		log.Fatal(err)
 	}
 
-	freeEmails, err := validate.GetFreeEmailList("./free_emails.toml")
+	freeEmails, err := mailvalidate.GetFreeEmailList("./free_emails.toml")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	roleAccounts, err := validate.GetRoleAccounts("./role_emails.toml")
+	roleAccounts, err := mailvalidate.GetRoleAccounts("./role_emails.toml")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -130,7 +129,7 @@ func RunDataStudy(inputFilePath, outputFilePath string) {
 	for v, email := range testEmails {
 		fmt.Println(v)
 
-		request := validate.EmailValidationRequest{
+		request := mailvalidate.EmailValidationRequest{
 			Email:            email,
 			FromDomain:       "hubspot.com",
 			FromEmail:        "yamini.rangan@hubspot.com",
@@ -143,9 +142,9 @@ func RunDataStudy(inputFilePath, outputFilePath string) {
 			validateCatchAll = true
 		}
 
-		syntaxResults := validate.ValidateEmailSyntax(email)
-		domainResults := validate.ValidateDomain(request, knownProviders, validateCatchAll)
-		emailResults := validate.ValidateEmail(request, knownProviders, freeEmails, roleAccounts)
+		syntaxResults := mailvalidate.ValidateEmailSyntax(email)
+		domainResults := mailvalidate.ValidateDomain(request, knownProviders, validateCatchAll)
+		emailResults := mailvalidate.ValidateEmail(request, knownProviders, freeEmails, roleAccounts)
 
 		isRisky := false
 		if emailResults.IsFreeAccount || emailResults.IsRoleAccount || emailResults.IsMailboxFull || domainResults.IsCatchAll || domainResults.IsFirewalled {
