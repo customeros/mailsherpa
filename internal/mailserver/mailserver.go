@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"regexp"
 	"strings"
 	"time"
 
@@ -16,7 +17,10 @@ import (
 type SMPTValidation struct {
 	CanConnectSmtp bool
 	InboxFull      bool
-	SMTPError      string
+	ResponseCode   string
+	ErrorCode      string
+	Description    string
+	SmtpResponse   string
 }
 
 type ProxySetup struct {
@@ -148,71 +152,58 @@ func sendMAILFROM(conn net.Conn, smtpClient *bufio.Reader, fromEmail string) err
 	return nil
 }
 
-func sendRCPTTO(conn net.Conn, smtpClient *bufio.Reader, emailToValidate string) (bool, SMPTValidation, error) {
-	results := SMPTValidation{}
+func sendRCPTTO(conn net.Conn, smtpClient *bufio.Reader, emailToValidate string) (isValid bool, results SMPTValidation, err error) {
 	rcpt := fmt.Sprintf("RCPT TO:<%s>", emailToValidate)
 	resp, err := sendSMTPcommand(conn, smtpClient, rcpt)
 	if err != nil {
 		return false, results, fmt.Errorf("RCPT TO command failed: %w", err)
 	}
 
-	respCode := strings.SplitN(resp, " ", 2)[0]
+	results.SmtpResponse = resp
+	results.ResponseCode, results.ErrorCode, results.Description = parseSmtpResponse(resp)
 
-	switch respCode {
+	switch results.ResponseCode {
 	case "250":
 		results.CanConnectSmtp = true
-		return true, results, nil
+		isValid = true
 	case "251":
 		results.CanConnectSmtp = true
-		return true, results, nil
-	case "450":
-		results.CanConnectSmtp = true
-		error := fmt.Sprintf("%s", resp)
-		results.SMTPError = error
-		return false, results, nil
-	case "451":
-		results.CanConnectSmtp = true
-		error := fmt.Sprintf("%s", resp)
-		results.SMTPError = error
-		return false, results, nil
-	case "452":
-		results.CanConnectSmtp = true
-		error := fmt.Sprintf("%s", resp)
-		results.SMTPError = error
-		return false, results, nil
-	case "503":
-		results.CanConnectSmtp = true
-		error := fmt.Sprintf("%s", resp)
-		results.SMTPError = error
-		return false, results, nil
-	case "550":
-		results.CanConnectSmtp = true
-		error := fmt.Sprintf("%s", resp)
-		results.SMTPError = error
-		return false, results, nil
-	case "551":
-		results.CanConnectSmtp = true
-		error := fmt.Sprintf("%s", resp)
-		results.SMTPError = error
-		return false, results, nil
+		isValid = true
 	case "552":
 		results.InboxFull = true
 		results.CanConnectSmtp = true
-		return false, results, nil
-	case "553":
-		results.CanConnectSmtp = true
-		error := fmt.Sprintf("%s", resp)
-		results.SMTPError = error
-		return false, results, nil
-	case "554":
-		results.CanConnectSmtp = true
-		error := fmt.Sprintf("%s", resp)
-		results.SMTPError = error
-		return false, results, nil
+		isValid = false
 	default:
 		results.CanConnectSmtp = true
-		error := fmt.Sprintf("%s", resp)
-		results.SMTPError = error
-		return false, results, nil
+		isValid = false
 	}
+	return
+}
+
+func parseSmtpResponse(response string) (statusCode, errorCode, description string) {
+	// Extract status code (first 3 digits)
+	statusCodeRegex := regexp.MustCompile(`^\d{3}`)
+	statusCode = statusCodeRegex.FindString(response)
+
+	// Extract error code (#.#.# or #.#.#.#), with or without a leading '#' or '-'
+	errorCodeRegex := regexp.MustCompile(`[-#]?\d+\.\d+\.\d+(?:\.\d+)?`)
+	if errorCodeMatch := errorCodeRegex.FindString(response); errorCodeMatch != "" {
+		errorCode = strings.TrimLeft(errorCodeMatch, "-#")
+	}
+
+	// Extract description
+	descriptionRegex := regexp.MustCompile(`^\d{3}(?:[-\s]#?\d+\.\d+\.\d+(?:\.\d+)?)?\s(.+)`)
+	if matches := descriptionRegex.FindStringSubmatch(response); len(matches) > 1 {
+		description = matches[1]
+		// Remove any URLs from the description
+		urlRegex := regexp.MustCompile(`https?://\S+`)
+		description = urlRegex.ReplaceAllString(description, "")
+		// Remove any text within square brackets
+		bracketRegex := regexp.MustCompile(`\[.*?\]`)
+		description = bracketRegex.ReplaceAllString(description, "")
+		// Trim any leading/trailing whitespace, dashes, or dots
+		description = strings.Trim(description, " -.")
+	}
+
+	return
 }

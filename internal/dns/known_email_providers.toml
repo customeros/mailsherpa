@@ -107,7 +107,6 @@ domains = [
     ["spamexperts.com", "solarwinds"],
     ["tacklephishing.com", "tackle phishing"],
     ["trendmicro.com", "trendmicro"],
-    ["vali.email", "vali"],
     ["worldsecuresystems.com", "world secure systems"],
     ["zixmail.net", "zix"]
 ]

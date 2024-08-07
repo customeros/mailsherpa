@@ -30,11 +30,16 @@ type DomainValidation struct {
 }
 
 type EmailValidation struct {
-	IsDeliverable bool
-	IsMailboxFull bool
-	IsRoleAccount bool
-	IsFreeAccount bool
-	SmtpError     string
+	IsDeliverable   bool
+	IsMailboxFull   bool
+	IsRoleAccount   bool
+	IsFreeAccount   bool
+	SmtpSuccess     bool
+	ResponseCode    string
+	ErrorCode       string
+	Description     string
+	RetryValidation bool
+	SmtpResponse    string
 }
 
 type SyntaxValidation struct {
@@ -153,7 +158,67 @@ func ValidateEmail(validationRequest EmailValidationRequest) (EmailValidation, e
 	}
 	results.IsDeliverable = isVerified
 	results.IsMailboxFull = smtpValidation.InboxFull
-	results.SmtpError = smtpValidation.SMTPError
+	results.ResponseCode = smtpValidation.ResponseCode
+	results.ErrorCode = smtpValidation.ErrorCode
+	results.Description = smtpValidation.Description
+	results.SmtpResponse = smtpValidation.SmtpResponse
+
+	switch results.ResponseCode {
+	case "250":
+		results.SmtpSuccess = true
+		results.ErrorCode = ""
+		results.Description = ""
+	case "251":
+		results.SmtpSuccess = true
+		results.ErrorCode = ""
+		results.Description = ""
+	case "450":
+		if results.ErrorCode == "4.2.0" {
+			results.RetryValidation = true
+		}
+	case "451":
+		if results.Description == "Internal resources are temporarily unavailable" || results.Description == "Account service is temporarily unavailable" || results.Description == "Recipient Temporarily Unavailable" || results.Description == "IP Temporarily Blacklisted" {
+			results.RetryValidation = true
+		}
+		if results.Description == "Account inbounds disabled" {
+			results.SmtpSuccess = true
+			results.ErrorCode = ""
+			results.Description = ""
+		}
+		if results.Description == "Sorry, I wasn’t able to establish an SMTP connection. I’m not going to try again; this message has been in the queue too long." {
+			results.SmtpSuccess = true
+			results.ErrorCode = ""
+			results.Description = ""
+		}
+		if results.ErrorCode == "4.7.1" {
+			results.RetryValidation = true
+		}
+	case "501":
+		if results.Description == "Invalid address" {
+			results.SmtpSuccess = true
+			results.ErrorCode = ""
+			results.Description = ""
+		}
+	case "503":
+		if results.Description == "User unknown" {
+			results.SmtpSuccess = true
+			results.ErrorCode = ""
+			results.Description = ""
+		}
+	case "550":
+		if results.Description == "Invalid Recipient" || results.Description == "Recipient not found" {
+			results.SmtpSuccess = true
+			results.ErrorCode = ""
+			results.Description = ""
+		}
+		if results.ErrorCode == "5.2.1" || results.ErrorCode == "5.7.1" || results.ErrorCode == "5.1.1." || results.ErrorCode == "5.1.6" || results.ErrorCode == "5.1.0" {
+			results.SmtpSuccess = true
+			results.ErrorCode = ""
+			results.Description = ""
+		}
+
+	}
+
 	return results, nil
 }
 
