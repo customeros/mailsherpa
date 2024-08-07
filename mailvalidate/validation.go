@@ -61,7 +61,7 @@ func ValidateEmailSyntax(email string) SyntaxValidation {
 }
 
 func ValidateDomain(validationRequest EmailValidationRequest, validateCatchAll bool) (DomainValidation, error) {
-	knownProviders, err := dns.GetKnownProviders("../known_email_providers.toml")
+	knownProviders, err := dns.GetKnownProviders()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -112,12 +112,12 @@ func ValidateEmail(validationRequest EmailValidationRequest) (EmailValidation, e
 		return results, errors.Wrap(err, "Invalid request")
 	}
 
-	freeEmails, err := GetFreeEmailList("../free_emails.toml")
+	freeEmails, err := GetFreeEmailList()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	roleAccounts, err := GetRoleAccounts("../role_emails.toml")
+	roleAccounts, err := GetRoleAccounts()
 	if err != nil {
 		log.Fatal(err)
 	}

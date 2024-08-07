@@ -1,14 +1,17 @@
 package mailvalidate
 
 import (
+	"embed"
 	"fmt"
-	"os"
 	"slices"
 
 	"github.com/BurntSushi/toml"
 
 	"github.com/customeros/mailsherpa/internal/syntax"
 )
+
+//go:embed role_emails.toml
+var roleEmailsFile embed.FS
 
 type RoleAccounts struct {
 	RoleAccountList []string `toml:"role_emails"`
@@ -26,14 +29,16 @@ func IsRoleAccountCheck(email string, roleAccounts RoleAccounts) (bool, error) {
 	return false, nil
 }
 
-func GetRoleAccounts(roleAccountFilePath string) (RoleAccounts, error) {
+func GetRoleAccounts() (RoleAccounts, error) {
 	var roleAccounts RoleAccounts
-	content, err := os.ReadFile(roleAccountFilePath)
+
+	// Read the file
+	fileData, err := roleEmailsFile.ReadFile("role_emails.toml")
 	if err != nil {
-		return RoleAccounts{}, fmt.Errorf("failed to read role_account file: %w", err)
+		return RoleAccounts{}, err
 	}
 
-	if _, err := toml.Decode(string(content), &roleAccounts); err != nil {
+	if _, err := toml.Decode(string(fileData), &roleAccounts); err != nil {
 		return RoleAccounts{}, fmt.Errorf("failed to decode TOML: %w", err)
 	}
 
