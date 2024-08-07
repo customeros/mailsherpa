@@ -14,7 +14,6 @@ type EmailValidationRequest struct {
 	Email                string
 	FromDomain           string
 	FromEmail            string
-	GenerateFromEmail    bool
 	CatchAllTestUser     string
 	ValidateFreeAccounts bool
 	ValidateRoleAccounts bool
