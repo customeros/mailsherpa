@@ -1,11 +1,13 @@
 package dns
 
 import (
+	"embed"
 	"fmt"
-	"os"
-
 	"github.com/BurntSushi/toml"
 )
+
+//go:embed known_email_providers.toml
+var knownProvidersFile embed.FS
 
 type Provider struct {
 	SPF  string `toml:"spf"`
@@ -15,17 +17,17 @@ type Provider struct {
 
 type KnownProviders map[string]Provider
 
-func GetKnownProviders(filename string) (KnownProviders, error) {
+func GetKnownProviders() (KnownProviders, error) {
 	var domain KnownProviders
 
 	// Read the file
-	content, err := os.ReadFile(filename)
+	fileData, err := knownProvidersFile.ReadFile("known_email_providers.toml")
 	if err != nil {
-		return nil, fmt.Errorf("error reading file: %w", err)
+		return nil, err
 	}
 
 	// Decode the TOML content
-	if err := toml.Unmarshal(content, &domain); err != nil {
+	if err := toml.Unmarshal(fileData, &domain); err != nil {
 		return nil, fmt.Errorf("error decoding TOML: %w", err)
 	}
 

@@ -6,12 +6,13 @@ import (
 	"os"
 )
 
-func main() {
+func mainNew() {
 	//datastudy.RunDataStudy("/Users/mbrown/downloads/test.csv", "/Users/mbrown/desktop/results.csv")
 }
 
-func mainOld() {
-	email := parseArgs()
+func main() {
+	//email := parseArgs()
+	email := "alex@customeros.ai"
 
 	// build validation request
 	request := mailvalidate.EmailValidationRequest{

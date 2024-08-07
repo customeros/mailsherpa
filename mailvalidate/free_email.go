@@ -1,14 +1,17 @@
 package mailvalidate
 
 import (
+	"embed"
 	"fmt"
-	"os"
 	"slices"
 
 	"github.com/BurntSushi/toml"
 
 	"github.com/customeros/mailsherpa/internal/syntax"
 )
+
+//go:embed free_emails.toml
+var freeEmailsFile embed.FS
 
 type FreeEmails struct {
 	FreeEmailList []string `toml:"free_emails"`
@@ -26,14 +29,16 @@ func IsFreeEmailCheck(email string, freeEmails FreeEmails) (bool, error) {
 	return false, nil
 }
 
-func GetFreeEmailList(freeEmailFilePath string) (FreeEmails, error) {
+func GetFreeEmailList() (FreeEmails, error) {
 	var freeEmails FreeEmails
-	content, err := os.ReadFile(freeEmailFilePath)
+
+	// Read the file
+	fileData, err := freeEmailsFile.ReadFile("free_emails.toml")
 	if err != nil {
-		return FreeEmails{}, fmt.Errorf("failed to read free_email file: %w", err)
+		return FreeEmails{}, err
 	}
 
-	if _, err := toml.Decode(string(content), &freeEmails); err != nil {
+	if _, err := toml.Decode(string(fileData), &freeEmails); err != nil {
 		return FreeEmails{}, fmt.Errorf("failed to decode TOML: %w", err)
 	}
 
