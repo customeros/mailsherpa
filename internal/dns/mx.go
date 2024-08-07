@@ -2,7 +2,6 @@ package dns
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"sort"
 	"strings"
@@ -18,13 +17,23 @@ func GetEmailProviderFromMx(email string, knownProviders KnownProviders) (string
 
 	for _, record := range mx {
 		domain := extractRootDomain(record)
-		provider, exists := knownProviders[domain]
-		if !exists {
-			log.Printf("Email provider unknown, please add `%s` to known_email_providers.toml", record)
+		provider, category := knownProviders.GetProviderByDomain(domain)
+		if provider == "" {
+			return domain, nil
 		}
 
-		if provider.Type == "enterprise" {
-			return provider.Name, nil
+		switch category {
+		case "enterprise":
+			return provider, nil
+		case "webmail":
+			return provider, nil
+		case "hosting":
+			return provider, nil
+		default:
+			if category == "security" {
+				return "unknown", nil
+			}
+			return domain, nil
 		}
 	}
 
