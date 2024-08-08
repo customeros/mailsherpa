@@ -1,17 +1,15 @@
-# MailSherpa Email Validation
+<br /><br />
 
-### Enhancements
+<p align="center"><img align="center" src="https://customer-os.imgix.net/companies/logos/mailsherpa_logo.png" height="96" alt="mailsherpa" /></p>
+<h1 align="center">MailSherpa</h1>
+<h4 align="center">A CLI for verifying email address deliverability over SMTP without sending an email.</h4>
 
-internal/syntax
+<br /><br /><br />
 
-- [ ] add check for unicode and emojis
-- [ ] subdomain test
+## 👉 Live Demo: https://customeros.ai
 
-internal/sfp
+This is open-source, but we also offer a hosted API that's simple to use. If you are interested, find out more at [CustomerOS](https://docs.customeros.ai/api-reference/verify/verify-an-email-address). If you have any questions, you can contact me at matt@customeros.ai.
 
-- [ ] expand sfp to include a mx
+<br />
 
-general
-
-- [ ] write all undetected spf and mx records to a file to be processed later
-- [ ] test proxy
+## Get Started
