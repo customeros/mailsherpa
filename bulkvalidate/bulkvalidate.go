@@ -1,4 +1,4 @@
-package datastudy
+package bulkvalidate
 
 import (
 	"encoding/csv"
@@ -10,8 +10,8 @@ import (
 
 	"github.com/lucasepe/codename"
 
-	"github.com/customeros/mailsherpa/internal/dns"
 	"github.com/customeros/mailsherpa/internal/syntax"
+	"github.com/customeros/mailsherpa/mailvalidate"
 )
 
 type DomainResponse struct {
@@ -102,22 +102,7 @@ func writeResultsFile(results []DomainResponse, filePath string) error {
 	return nil
 }
 
-func RunDataStudy(inputFilePath, outputFilePath string) {
-	knownProviders, err := dns.GetKnownProviders("./known_email_providers.toml")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	freeEmails, err := mailvalidate.GetFreeEmailList("./free_emails.toml")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	roleAccounts, err := mailvalidate.GetRoleAccounts("./role_emails.toml")
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func RunBulkValidation(inputFilePath, outputFilePath string) {
 	testEmails, err := read_csv(inputFilePath)
 	if err != nil {
 		log.Fatal(err)
@@ -143,8 +128,14 @@ func RunDataStudy(inputFilePath, outputFilePath string) {
 		}
 
 		syntaxResults := mailvalidate.ValidateEmailSyntax(email)
-		domainResults := mailvalidate.ValidateDomain(request, knownProviders, validateCatchAll)
-		emailResults := mailvalidate.ValidateEmail(request, knownProviders, freeEmails, roleAccounts)
+		domainResults, err := mailvalidate.ValidateDomain(request, validateCatchAll)
+		if err != nil {
+			log.Printf("Error: %w", err)
+		}
+		emailResults, err := mailvalidate.ValidateEmail(request)
+		if err != nil {
+			log.Printf("Error: %w", err)
+		}
 
 		isRisky := false
 		if emailResults.IsFreeAccount || emailResults.IsRoleAccount || emailResults.IsMailboxFull || domainResults.IsCatchAll || domainResults.IsFirewalled {
@@ -169,7 +160,6 @@ func RunDataStudy(inputFilePath, outputFilePath string) {
 			isRoleAccount: emailResults.IsRoleAccount,
 			isMailboxFull: emailResults.IsMailboxFull,
 			isCatchAll:    isCatchAll,
-			smtpError:     emailResults.SmtpError,
 		}
 		output = append(output, results)
 	}
