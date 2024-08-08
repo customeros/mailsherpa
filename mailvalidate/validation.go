@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"log"
+	"strings"
 
 	"github.com/customeros/mailsherpa/internal/dns"
 	"github.com/customeros/mailsherpa/internal/mailserver"
@@ -177,7 +178,10 @@ func ValidateEmail(validationRequest EmailValidationRequest) (EmailValidation, e
 			results.RetryValidation = true
 		}
 	case "451":
-		if results.Description == "Internal resources are temporarily unavailable" || results.Description == "Account service is temporarily unavailable" || results.Description == "Recipient Temporarily Unavailable" || results.Description == "IP Temporarily Blacklisted" {
+		if strings.Contains(results.Description, "Internal resources are temporarily unavailable") ||
+			strings.Contains(results.Description, "Account service is temporarily unavailable") ||
+			strings.Contains(results.Description, "Recipient Temporarily Unavailable") ||
+			strings.Contains(results.Description, "IP Temporarily Blacklisted") {
 			results.RetryValidation = true
 		}
 		if results.Description == "Account inbounds disabled" {
@@ -185,7 +189,7 @@ func ValidateEmail(validationRequest EmailValidationRequest) (EmailValidation, e
 			results.ErrorCode = ""
 			results.Description = ""
 		}
-		if results.Description == "Sorry, I wasn’t able to establish an SMTP connection. I’m not going to try again; this message has been in the queue too long." {
+		if strings.Contains(results.Description, "Sorry, I wasn’t able to establish an SMTP connection. I’m not going to try again; this message has been in the queue too long.") {
 			results.SmtpSuccess = true
 			results.ErrorCode = ""
 			results.Description = ""
@@ -194,24 +198,24 @@ func ValidateEmail(validationRequest EmailValidationRequest) (EmailValidation, e
 			results.RetryValidation = true
 		}
 	case "501":
-		if results.Description == "Invalid address" {
+		if strings.Contains(results.Description, "Invalid address") {
 			results.SmtpSuccess = true
 			results.ErrorCode = ""
 			results.Description = ""
 		}
 	case "503":
-		if results.Description == "User unknown" {
+		if strings.Contains(results.Description, "User unknown") {
 			results.SmtpSuccess = true
 			results.ErrorCode = ""
 			results.Description = ""
 		}
 	case "550":
-		if results.Description == "Invalid Recipient" || results.Description == "Recipient not found" {
+		if strings.Contains(results.Description, "Invalid Recipient") || strings.Contains(results.Description, "Recipient not found") {
 			results.SmtpSuccess = true
 			results.ErrorCode = ""
 			results.Description = ""
 		}
-		if results.ErrorCode == "5.2.1" || results.ErrorCode == "5.7.1" || results.ErrorCode == "5.1.1." || results.ErrorCode == "5.1.6" || results.ErrorCode == "5.1.0" {
+		if results.ErrorCode == "5.2.1" || results.ErrorCode == "5.7.1" || results.ErrorCode == "5.1.1" || results.ErrorCode == "5.1.6" || results.ErrorCode == "5.1.0" {
 			results.SmtpSuccess = true
 			results.ErrorCode = ""
 			results.Description = ""

@@ -160,7 +160,7 @@ func sendRCPTTO(conn net.Conn, smtpClient *bufio.Reader, emailToValidate string)
 	}
 
 	results.SmtpResponse = resp
-	results.ResponseCode, results.ErrorCode, results.Description = parseSmtpResponse(resp)
+	results.ResponseCode, results.ErrorCode, results.Description = ParseSmtpResponse(resp)
 
 	switch results.ResponseCode {
 	case "250":
@@ -180,30 +180,46 @@ func sendRCPTTO(conn net.Conn, smtpClient *bufio.Reader, emailToValidate string)
 	return
 }
 
-func parseSmtpResponse(response string) (statusCode, errorCode, description string) {
-	// Extract status code (first 3 digits)
-	statusCodeRegex := regexp.MustCompile(`^\d{3}`)
-	statusCode = statusCodeRegex.FindString(response)
+func ParseSmtpResponse(response string) (statusCode, errorCode, description string) {
+	// Trim the input string
+	response = strings.TrimSpace(response)
 
-	// Extract error code (#.#.# or #.#.#.#), with or without a leading '#' or '-'
-	errorCodeRegex := regexp.MustCompile(`[-#]?\d+\.\d+\.\d+(?:\.\d+)?`)
-	if errorCodeMatch := errorCodeRegex.FindString(response); errorCodeMatch != "" {
-		errorCode = strings.TrimLeft(errorCodeMatch, "-#")
+	// Extract the status code
+	statusCodePattern := `^(\d{3})`
+	statusCodeRegex := regexp.MustCompile(statusCodePattern)
+	statusCodeMatch := statusCodeRegex.FindStringSubmatch(response)
+	if len(statusCodeMatch) > 0 {
+		statusCode = statusCodeMatch[1]
+	} else {
+		description = response
+		return
 	}
 
-	// Extract description
-	descriptionRegex := regexp.MustCompile(`^\d{3}(?:[-\s]#?\d+\.\d+\.\d+(?:\.\d+)?)?\s(.+)`)
-	if matches := descriptionRegex.FindStringSubmatch(response); len(matches) > 1 {
-		description = matches[1]
-		// Remove any URLs from the description
-		urlRegex := regexp.MustCompile(`https?://\S+`)
-		description = urlRegex.ReplaceAllString(description, "")
-		// Remove any text within square brackets
-		bracketRegex := regexp.MustCompile(`\[.*?\]`)
-		description = bracketRegex.ReplaceAllString(description, "")
-		// Trim any leading/trailing whitespace, dashes, or dots
-		description = strings.Trim(description, " -.")
+	// Extract the error code
+	errorCodePattern := `\b(\d\.\d\.\d)\b`
+	errorCodeRegex := regexp.MustCompile(errorCodePattern)
+	errorCodeMatch := errorCodeRegex.FindStringSubmatch(response)
+	if len(errorCodeMatch) > 0 {
+		errorCode = errorCodeMatch[1]
+	} else {
+		errorCode = ""
 	}
+
+	// Extract the description
+	if errorCode == "" {
+		description = strings.TrimSpace(response[len(statusCode):])
+	} else {
+		startErrorCode := strings.Index(response, errorCode)
+		endErrorCode := startErrorCode + len(errorCode)
+		if startErrorCode <= 6 {
+			description = strings.TrimSpace(response[endErrorCode:])
+		} else {
+			description = strings.TrimSpace(response[len(statusCode):])
+		}
+	}
+
+	// Remove leading special characters from the description
+	description = strings.TrimLeft(description, "]) #-}")
 
 	return
 }

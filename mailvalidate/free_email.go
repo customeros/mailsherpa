@@ -3,7 +3,7 @@ package mailvalidate
 import (
 	"embed"
 	"fmt"
-	"slices"
+	"golang.org/x/exp/slices"
 
 	"github.com/BurntSushi/toml"
 

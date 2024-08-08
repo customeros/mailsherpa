@@ -3,11 +3,9 @@ package mailvalidate
 import (
 	"embed"
 	"fmt"
-	"slices"
-
 	"github.com/BurntSushi/toml"
-
 	"github.com/customeros/mailsherpa/internal/syntax"
+	"golang.org/x/exp/slices"
 )
 
 //go:embed role_emails.toml
