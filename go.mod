@@ -1,6 +1,6 @@
 module github.com/customeros/mailsherpa
 
-go 1.22.3
+go 1.21
 
 require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
