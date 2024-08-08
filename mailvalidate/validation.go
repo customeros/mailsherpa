@@ -2,9 +2,10 @@ package mailvalidate
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"log"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/customeros/mailsherpa/internal/dns"
 	"github.com/customeros/mailsherpa/internal/mailserver"
@@ -256,11 +257,11 @@ func validateRequest(request *EmailValidationRequest) error {
 		return errors.New("FromDomain is required")
 	}
 	if request.FromEmail == "" {
-		firstName, lastName := generateNames()
+		firstName, lastName := GenerateNames()
 		request.FromEmail = fmt.Sprintf("%s.%s@%s", firstName, lastName, request.FromDomain)
 	}
 	if request.CatchAllTestUser == "" {
-		request.CatchAllTestUser = generateCatchAllUsername()
+		request.CatchAllTestUser = GenerateCatchAllUsername()
 	}
 	return nil
 }

@@ -1,13 +1,14 @@
 package mailvalidate
 
 import (
-	"github.com/lucasepe/codename"
 	"math/rand"
 	"strings"
 	"time"
+
+	"github.com/lucasepe/codename"
 )
 
-func generateNames() (firstName string, lastName string) {
+func GenerateNames() (firstName string, lastName string) {
 	firstNames := []string{
 		"emma", "liam", "olivia", "noah", "ava", "ethan", "sophia", "mason",
 		"isabella", "william", "mia", "james", "charlotte", "benjamin", "amelia",
@@ -62,7 +63,7 @@ func generateNames() (firstName string, lastName string) {
 	return firstName, lastName
 }
 
-func generateCatchAllUsername() string {
+func GenerateCatchAllUsername() string {
 	rng, err := codename.DefaultRNG()
 	if err != nil {
 		panic(err)
