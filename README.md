@@ -1,6 +1,6 @@
 <br /><br />
 
-<p align="center"><img align="center" src="https://customer-os.imgix.net/companies/logos/mailsherpa_logo.png" height="96" alt="mailsherpa" /></p>
+<p align="center"><img align="center" src="https://customer-os.imgix.net/companies/logos/mailsherpa_logo.png" height="144" alt="mailsherpa" /></p>
 <h1 align="center">MailSherpa</h1>
 <h4 align="center">A CLI for verifying email address deliverability over SMTP without sending an email.</h4>
 
