@@ -121,7 +121,7 @@ func buildRequest(email string) mailvalidate.EmailValidationRequest {
 		Email:                email,
 		FromDomain:           fromDomain,
 		FromEmail:            fmt.Sprintf("%s.%s@%s", firstname, lastname, fromDomain),
-		CatchAllTestUser:     fmt.Sprintf("%s@%S", mailvalidate.GenerateCatchAllUsername(), recipientDomain),
+		CatchAllTestUser:     fmt.Sprintf("%s@%s", mailvalidate.GenerateCatchAllUsername(), recipientDomain),
 		ValidateFreeAccounts: validateFreeAccounts,
 		ValidateRoleAccounts: validateRoleMailboxes,
 	}
