@@ -63,6 +63,12 @@ func TestParseSmtpResponse(t *testing.T) {
 			expectedError: "5.1.0",
 			expectedDesc:  "Address rejected.",
 		},
+		{
+			input:         "550 5.7.1 Service unavailable, Client host [92.239.49.239] blocked using Spamhaus. To request removal from this list see https://www.spamhaus.org/query/ip/92.239.49.239 AS(1450) [LO1PEPF000022FC.GBRP265.PROD.OUTLOOK.COM 2024-08-08T21:41:59.031Z 08DCB37616E26EE1]",
+			expectedCode:  "550",
+			expectedError: "5.7.1",
+			expectedDesc:  "Service unavailable, Client host [92.239.49.239] blocked using Spamhaus. To request removal from this list see https://www.spamhaus.org/query/ip/92.239.49.239 AS(1450) [LO1PEPF000022FC.GBRP265.PROD.OUTLOOK.COM 2024-08-08T21:41:59.031Z 08DCB37616E26EE1]",
+		},
 	}
 
 	for _, tc := range testCases {
