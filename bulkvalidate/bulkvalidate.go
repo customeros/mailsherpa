@@ -130,11 +130,11 @@ func RunBulkValidation(inputFilePath, outputFilePath string) {
 		syntaxResults := mailvalidate.ValidateEmailSyntax(email)
 		domainResults, err := mailvalidate.ValidateDomain(request, validateCatchAll)
 		if err != nil {
-			log.Printf("Error: %w", err)
+			log.Printf("Error: %s", err.Error())
 		}
 		emailResults, err := mailvalidate.ValidateEmail(request)
 		if err != nil {
-			log.Printf("Error: %w", err)
+			log.Printf("Error: %s", err.Error())
 		}
 
 		isRisky := false
