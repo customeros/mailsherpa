@@ -115,11 +115,26 @@ func connectToSMTPviaProxy(mxServer, proxyAddress, proxyUsername, proxyPassword 
 }
 
 func readSMTPgreeting(smtpClient *bufio.Reader) error {
-	_, err := smtpClient.ReadString('\n')
-	if err != nil {
-		return fmt.Errorf("Failed to read SMTP server greeting: %w", err)
+	for {
+		line, err := smtpClient.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("Failed to read SMTP server greeting: %w", err)
+		}
+
+		// Trim the line to remove whitespace and newline characters
+		line = strings.TrimSpace(line)
+
+		// Check if this is the last line of the greeting
+		if strings.HasPrefix(line, "220 ") {
+			// This is the final greeting line
+			return nil
+		} else if !strings.HasPrefix(line, "220-") {
+			// If the line doesn't start with 220- or 220, it's an unexpected response
+			return fmt.Errorf("Unexpected SMTP server greeting: %s", line)
+		}
+
+		// If it's a continuation line (starts with 220-), continue reading
 	}
-	return nil
 }
 
 func sendSMTPcommand(conn net.Conn, smtpClient *bufio.Reader, cmd string) (string, error) {
