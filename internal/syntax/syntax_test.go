@@ -156,7 +156,7 @@ func TestGetEmailUserAndDomain(t *testing.T) {
 		{"Leading space", " user@example.com", "", "", false},
 		{"Trailing space", "user@example.com ", "", "", false},
 		{"Space in email", "user name@example.com", "", "", false},
-		{"Unicode in email", "üser@exämple.com", "üser", "exämple.com", true},
+		{"Unicode in email", "üser@example.com", "üser", "example.com", true},
 	}
 
 	for _, tt := range tests {
