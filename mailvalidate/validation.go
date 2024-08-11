@@ -111,7 +111,6 @@ func ValidateDomainWithCustomKnownProviders(validationRequest EmailValidationReq
 		var smptResults mailserver.SMPTValidation
 		results.IsCatchAll, smptResults = catchAllTest(validationRequest)
 		results.CanConnectSMTP = smptResults.CanConnectSmtp
-
 	}
 
 	return results, nil
@@ -165,72 +164,77 @@ func ValidateEmail(validationRequest EmailValidationRequest) (EmailValidation, e
 	results.Description = smtpValidation.Description
 	results.SmtpResponse = smtpValidation.SmtpResponse
 
-	switch results.ResponseCode {
+	finalResults := handleSmtpResponses(results)
+
+	return finalResults, nil
+}
+
+func handleSmtpResponses(resp EmailValidation) EmailValidation {
+	switch resp.ResponseCode {
 	case "250":
-		results.SmtpSuccess = true
-		results.ErrorCode = ""
-		results.Description = ""
+		resp.SmtpSuccess = true
+		resp.ErrorCode = ""
+		resp.Description = ""
 	case "251":
-		results.SmtpSuccess = true
-		results.ErrorCode = ""
-		results.Description = ""
+		resp.SmtpSuccess = true
+		resp.ErrorCode = ""
+		resp.Description = ""
 	case "450":
-		if results.ErrorCode == "4.2.0" {
-			results.RetryValidation = true
+		if resp.ErrorCode == "4.2.0" {
+			resp.RetryValidation = true
 		}
 	case "451":
-		if strings.Contains(results.Description, "Internal resources are temporarily unavailable") ||
-			strings.Contains(results.Description, "Account service is temporarily unavailable") ||
-			strings.Contains(results.Description, "Recipient Temporarily Unavailable") ||
-			strings.Contains(results.Description, "IP Temporarily Blacklisted") {
-			results.RetryValidation = true
+		if strings.Contains(resp.Description, "Internal resources are temporarily unavailable") ||
+			strings.Contains(resp.Description, "Account service is temporarily unavailable") ||
+			strings.Contains(resp.Description, "Recipient Temporarily Unavailable") ||
+			strings.Contains(resp.Description, "IP Temporarily Blacklisted") {
+			resp.RetryValidation = true
 		}
-		if results.Description == "Account inbounds disabled" {
-			results.SmtpSuccess = true
-			results.ErrorCode = ""
-			results.Description = ""
+		if resp.Description == "Account inbounds disabled" {
+			resp.SmtpSuccess = true
+			resp.ErrorCode = ""
+			resp.Description = ""
 		}
-		if strings.Contains(results.Description, "Sorry, I wasn’t able to establish an SMTP connection. I’m not going to try again; this message has been in the queue too long.") {
-			results.SmtpSuccess = true
-			results.ErrorCode = ""
-			results.Description = ""
+		if strings.Contains(resp.Description, "Sorry, I wasn’t able to establish an SMTP connection. I’m not going to try again; this message has been in the queue too long.") {
+			resp.SmtpSuccess = true
+			resp.ErrorCode = ""
+			resp.Description = ""
 		}
-		if results.ErrorCode == "4.7.1" {
-			results.RetryValidation = true
+		if resp.ErrorCode == "4.7.1" {
+			resp.RetryValidation = true
 		}
 	case "501":
-		if strings.Contains(results.Description, "Invalid address") {
-			results.SmtpSuccess = true
-			results.ErrorCode = ""
-			results.Description = ""
+		if strings.Contains(resp.Description, "Invalid address") {
+			resp.SmtpSuccess = true
+			resp.ErrorCode = ""
+			resp.Description = ""
 		}
 	case "503":
-		if strings.Contains(results.Description, "User unknown") {
-			results.SmtpSuccess = true
-			results.ErrorCode = ""
-			results.Description = ""
+		if strings.Contains(resp.Description, "User unknown") {
+			resp.SmtpSuccess = true
+			resp.ErrorCode = ""
+			resp.Description = ""
 		}
 	case "550":
-		if strings.Contains(results.Description, "Invalid Recipient") || strings.Contains(results.Description, "Recipient not found") {
-			results.SmtpSuccess = true
-			results.ErrorCode = ""
-			results.Description = ""
+		if strings.Contains(resp.Description, "Invalid Recipient") || strings.Contains(resp.Description, "Recipient not found") {
+			resp.SmtpSuccess = true
+			resp.ErrorCode = ""
+			resp.Description = ""
 		}
-		if results.ErrorCode == "5.2.1" || results.ErrorCode == "5.7.1" || results.ErrorCode == "5.1.1" || results.ErrorCode == "5.1.6" || results.ErrorCode == "5.1.0" {
-			results.SmtpSuccess = true
-			results.ErrorCode = ""
-			results.Description = ""
+		if resp.ErrorCode == "5.2.1" || resp.ErrorCode == "5.7.1" || resp.ErrorCode == "5.1.1" || resp.ErrorCode == "5.1.6" || resp.ErrorCode == "5.1.0" {
+			resp.SmtpSuccess = true
+			resp.ErrorCode = ""
+			resp.Description = ""
 		}
 
 	}
-
-	return results, nil
+	return resp
 }
 
 func catchAllTest(validationRequest EmailValidationRequest) (bool, mailserver.SMPTValidation) {
 	_, domain, ok := syntax.GetEmailUserAndDomain(validationRequest.Email)
 	if !ok {
-		log.Printf("Invalid email address")
+		log.Printf("Cannot run Catch-All test, invalid email address")
 		return false, mailserver.SMPTValidation{}
 	}
 

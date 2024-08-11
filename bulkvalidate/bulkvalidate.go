@@ -9,24 +9,12 @@ import (
 	"strings"
 
 	"github.com/lucasepe/codename"
+	"github.com/schollz/progressbar/v3"
 
+	"github.com/customeros/mailsherpa/internal/run"
 	"github.com/customeros/mailsherpa/internal/syntax"
 	"github.com/customeros/mailsherpa/mailvalidate"
 )
-
-type DomainResponse struct {
-	email         string
-	isDeliverable bool
-	isSyntaxValid bool
-	provider      string
-	isRisky       bool
-	isFirewalled  bool
-	isFreeAccount bool
-	isRoleAccount bool
-	isMailboxFull bool
-	isCatchAll    bool
-	smtpError     string
-}
 
 func read_csv(filePath string) ([]string, error) {
 	// Open the CSV file
@@ -61,7 +49,7 @@ func read_csv(filePath string) ([]string, error) {
 	return data, nil
 }
 
-func writeResultsFile(results []DomainResponse, filePath string) error {
+func writeResultsFile(results []run.VerifyEmailResponse, filePath string) error {
 	// Create or open the CSV file
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -74,7 +62,27 @@ func writeResultsFile(results []DomainResponse, filePath string) error {
 	defer writer.Flush()
 
 	// Write the header row
-	header := []string{"Email", "IsDeliverable", "IsSyntaxValid", "Provider", "IsRisky", "IsFirewalled", "IsFreeAccount", "IsRoleAccount", "IsMailboxFull", "IsCatchAll", "SMTPError"}
+	header := []string{
+		"Email",
+		"Username",
+		"Domain",
+		"IsValidSyntax",
+		"IsDeliverable",
+		"Provider",
+		"Firewall",
+		"IsRisky",
+		"IsFirewalled",
+		"IsFreeAccount",
+		"IsRoleAccount",
+		"IsMailboxFull",
+		"IsCatchAll",
+		"SmtpSuccess",
+		"SmtpRetry",
+		"SmtpResponseCode",
+		"SmtpErrorCode",
+		"SmtpDescription",
+	}
+
 	if err := writer.Write(header); err != nil {
 		return fmt.Errorf("error writing header: %w", err)
 	}
@@ -82,17 +90,24 @@ func writeResultsFile(results []DomainResponse, filePath string) error {
 	// Write each DomainResponse as a row in the CSV
 	for _, resp := range results {
 		row := []string{
-			resp.email,
-			strconv.FormatBool(resp.isDeliverable),
-			strconv.FormatBool(resp.isSyntaxValid),
-			resp.provider,
-			strconv.FormatBool(resp.isRisky),
-			strconv.FormatBool(resp.isFirewalled),
-			strconv.FormatBool(resp.isFreeAccount),
-			strconv.FormatBool(resp.isRoleAccount),
-			strconv.FormatBool(resp.isMailboxFull),
-			strconv.FormatBool(resp.isCatchAll),
-			resp.smtpError,
+			resp.Email,
+			resp.Syntax.User,
+			resp.Syntax.Domain,
+			strconv.FormatBool(resp.Syntax.IsValid),
+			strconv.FormatBool(resp.IsDeliverable),
+			resp.Provider,
+			resp.Firewall,
+			strconv.FormatBool(resp.IsRisky),
+			strconv.FormatBool(resp.Risk.IsFirewalled),
+			strconv.FormatBool(resp.Risk.IsFreeAccount),
+			strconv.FormatBool(resp.Risk.IsRoleAccount),
+			strconv.FormatBool(resp.Risk.IsMailboxFull),
+			strconv.FormatBool(resp.Risk.IsCatchAll),
+			strconv.FormatBool(resp.Smtp.Success),
+			strconv.FormatBool(resp.Smtp.Retry),
+			resp.Smtp.ResponseCode,
+			resp.Smtp.ErrorCode,
+			resp.Smtp.Description,
 		}
 		if err := writer.Write(row); err != nil {
 			return fmt.Errorf("error writing row: %w", err)
@@ -108,18 +123,14 @@ func RunBulkValidation(inputFilePath, outputFilePath string) {
 		log.Fatal(err)
 	}
 
-	var output []DomainResponse
 	catchAllResults := make(map[string]bool)
+	var output []run.VerifyEmailResponse
 
-	for v, email := range testEmails {
-		fmt.Println(v)
+	bar := progressbar.Default(int64(len(testEmails)))
 
-		request := mailvalidate.EmailValidationRequest{
-			Email:            email,
-			FromDomain:       "hubspot.com",
-			FromEmail:        "yamini.rangan@hubspot.com",
-			CatchAllTestUser: generateCatchAllUsername(),
-		}
+	for _, email := range testEmails {
+		bar.Add(1)
+		request := run.BuildRequest(email)
 
 		_, domain, _ := syntax.GetEmailUserAndDomain(email)
 		validateCatchAll := false
@@ -130,16 +141,11 @@ func RunBulkValidation(inputFilePath, outputFilePath string) {
 		syntaxResults := mailvalidate.ValidateEmailSyntax(email)
 		domainResults, err := mailvalidate.ValidateDomain(request, validateCatchAll)
 		if err != nil {
-			log.Printf("Error: %s", err.Error())
+			log.Printf("Error: %s %s", email, err.Error())
 		}
 		emailResults, err := mailvalidate.ValidateEmail(request)
 		if err != nil {
-			log.Printf("Error: %s", err.Error())
-		}
-
-		isRisky := false
-		if emailResults.IsFreeAccount || emailResults.IsRoleAccount || emailResults.IsMailboxFull || domainResults.IsCatchAll || domainResults.IsFirewalled {
-			isRisky = true
+			log.Printf("Error: %s %s", email, err.Error())
 		}
 
 		isCatchAll := domainResults.IsCatchAll
@@ -149,18 +155,7 @@ func RunBulkValidation(inputFilePath, outputFilePath string) {
 			isCatchAll = catchAllResults[domain]
 		}
 
-		results := DomainResponse{
-			email:         email,
-			isDeliverable: emailResults.IsDeliverable,
-			isSyntaxValid: syntaxResults.IsValid,
-			provider:      domainResults.Provider,
-			isRisky:       isRisky,
-			isFirewalled:  domainResults.IsFirewalled,
-			isFreeAccount: emailResults.IsFreeAccount,
-			isRoleAccount: emailResults.IsRoleAccount,
-			isMailboxFull: emailResults.IsMailboxFull,
-			isCatchAll:    isCatchAll,
-		}
+		results := run.BuildResponse(email, syntaxResults, domainResults, emailResults)
 		output = append(output, results)
 	}
 	writeResultsFile(output, outputFilePath)
