@@ -17,6 +17,7 @@ type EmailValidationRequest struct {
 	FromDomain       string
 	FromEmail        string
 	CatchAllTestUser string
+	Dns              dns.DNS
 }
 
 type DomainValidation struct {
@@ -26,6 +27,8 @@ type DomainValidation struct {
 	IsFirewalled      bool
 	IsCatchAll        bool
 	CanConnectSMTP    bool
+	HasMXRecord       bool
+	HasSPFRecord      bool
 }
 
 type EmailValidation struct {
@@ -78,28 +81,33 @@ func ValidateDomainWithCustomKnownProviders(validationRequest EmailValidationReq
 		return results, errors.Wrap(err, "Invalid request")
 	}
 
-	provider, err := dns.GetEmailProviderFromMx(validationRequest.Email, knownProviders)
-	if err != nil {
-		return results, errors.Wrap(err, "Error getting provider from MX records")
+	if len(validationRequest.Dns.MX) != 0 {
+		results.HasMXRecord = true
+		provider, firewall := dns.GetEmailProviderFromMx(validationRequest.Dns, knownProviders)
+		results.Provider = provider
+		if firewall != "" {
+			results.Firewall = firewall
+			results.IsFirewalled = true
+		}
 	}
-	results.Provider = provider
 
-	authorizedSenders, err := dns.GetAuthorizedSenders(validationRequest.Email, &knownProviders)
-	if err != nil {
-		return results, errors.Wrap(err, "Error getting authorized senders from spf records")
+	if validationRequest.Dns.SPF != "" {
+		results.HasSPFRecord = true
+		authorizedSenders := dns.GetAuthorizedSenders(validationRequest.Dns, &knownProviders)
+		results.AuthorizedSenders = authorizedSenders
 	}
-	results.AuthorizedSenders = authorizedSenders
-	if results.Provider == "unknown" && len(results.AuthorizedSenders.Enterprise) > 0 {
+
+	if results.Provider == "" && len(results.AuthorizedSenders.Enterprise) > 0 {
 		results.Provider = results.AuthorizedSenders.Enterprise[0]
 	}
-	if results.Provider == "unknown" && len(results.AuthorizedSenders.Webmail) > 0 {
+	if results.Provider == "" && len(results.AuthorizedSenders.Webmail) > 0 {
 		results.Provider = results.AuthorizedSenders.Webmail[0]
 	}
-	if results.Provider == "unknown" && len(results.AuthorizedSenders.Hosting) > 0 {
+	if results.Provider == "" && len(results.AuthorizedSenders.Hosting) > 0 {
 		results.Provider = results.AuthorizedSenders.Hosting[0]
 	}
 
-	if len(results.AuthorizedSenders.Security) > 0 {
+	if !results.IsFirewalled && len(results.AuthorizedSenders.Security) > 0 {
 		results.IsFirewalled = true
 		results.Firewall = results.AuthorizedSenders.Security[0]
 	}
@@ -145,6 +153,7 @@ func ValidateEmail(validationRequest EmailValidationRequest) (EmailValidation, e
 		validationRequest.Email,
 		validationRequest.FromDomain,
 		validationRequest.FromEmail,
+		validationRequest.Dns,
 	)
 	if err != nil {
 		return results, errors.Wrap(err, "Error validating email via SMTP")
@@ -235,6 +244,7 @@ func catchAllTest(validationRequest EmailValidationRequest) (bool, mailserver.SM
 		catchAllEmail,
 		validationRequest.FromDomain,
 		validationRequest.FromEmail,
+		validationRequest.Dns,
 	)
 	if err != nil {
 		log.Printf("Error validating email via SMTP: %v", err)
