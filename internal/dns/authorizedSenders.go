@@ -1,12 +1,8 @@
 package dns
 
 import (
-	"fmt"
-	"net"
 	"regexp"
 	"strings"
-
-	"github.com/customeros/mailsherpa/internal/syntax"
 )
 
 type AuthorizedSenders struct {
@@ -17,29 +13,11 @@ type AuthorizedSenders struct {
 	Other      []string
 }
 
-func GetAuthorizedSenders(email string, knownProviders *KnownProviders) (AuthorizedSenders, error) {
-	spfRecord, err := getSPFRecord(email)
-	if err != nil {
-		return AuthorizedSenders{}, fmt.Errorf("error getting SPF record: %w", err)
+func GetAuthorizedSenders(dns DNS, knownProviders *KnownProviders) AuthorizedSenders {
+	if dns.SPF == "" {
+		return AuthorizedSenders{}
 	}
-	return processIncludes(spfRecord, knownProviders), nil
-}
-
-func getSPFRecord(email string) (string, error) {
-	_, domain, ok := syntax.GetEmailUserAndDomain(email)
-	if !ok {
-		return "", fmt.Errorf("invalid email address")
-	}
-	records, err := net.LookupTXT(domain)
-	if err != nil {
-		return "", fmt.Errorf("error looking up TXT records: %w", err)
-	}
-	for _, record := range records {
-		if strings.HasPrefix(strings.TrimSpace(record), "v=spf1") {
-			return record, nil
-		}
-	}
-	return "", fmt.Errorf("no SPF record found for domain %s", domain)
+	return processIncludes(dns.SPF, knownProviders)
 }
 
 func processIncludes(spfRecord string, knownProviders *KnownProviders) AuthorizedSenders {

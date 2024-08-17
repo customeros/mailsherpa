@@ -28,25 +28,30 @@ type ProxySetup struct {
 	Password string
 }
 
-func VerifyEmailAddress(email, fromDomain, fromEmail string) (bool, SMPTValidation, error) {
+func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS) (bool, SMPTValidation, error) {
 	results := SMPTValidation{}
 	var isVerified bool
 
-	mxServers, err := dns.GetMXRecordsForEmail(email)
-	if err != nil {
-		return false, results, err
-	}
-
-	if len(mxServers) == 0 {
-		return false, results, fmt.Errorf("no MX records found for domain")
+	if len(dnsRecords.MX) == 0 {
+		results.Description = "No MX records for domain"
+		return false, results, nil
 	}
 
 	var conn net.Conn
 	var client *bufio.Reader
+	var err error
+	var connected bool
 
-	conn, client, err = connectToSMTP(mxServers[0])
-	if err != nil {
-		return false, results, err
+	for i := 0; i < len(dnsRecords.MX); i++ {
+		conn, client, err = connectToSMTP(dnsRecords.MX[i])
+		if err == nil {
+			connected = true
+			break
+		}
+	}
+
+	if !connected {
+		return false, results, fmt.Errorf("failed to connect to any MX server: %w", err)
 	}
 
 	defer conn.Close()

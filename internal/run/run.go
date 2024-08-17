@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/customeros/mailsherpa/internal/dns"
 	"github.com/customeros/mailsherpa/mailvalidate"
 )
 
@@ -48,6 +49,7 @@ func BuildRequest(email string) mailvalidate.EmailValidationRequest {
 		FromDomain:       fromDomain,
 		FromEmail:        fmt.Sprintf("%s.%s@%s", firstname, lastname, fromDomain),
 		CatchAllTestUser: mailvalidate.GenerateCatchAllUsername(),
+		Dns:              dns.GetDNS(email),
 	}
 	return request
 }
@@ -56,6 +58,10 @@ func BuildResponse(emailAddress string, syntax mailvalidate.SyntaxValidation, do
 	isRisky := false
 	if email.IsFreeAccount || email.IsRoleAccount || email.IsMailboxFull || domain.IsCatchAll || domain.IsFirewalled {
 		isRisky = true
+	}
+
+	if !domain.HasMXRecord {
+		email.SmtpSuccess = true
 	}
 
 	risk := VerifyEmailRisk{
