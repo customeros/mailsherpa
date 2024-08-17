@@ -80,8 +80,13 @@ func BuildResponse(emailAddress string, syntax mailvalidate.SyntaxValidation, do
 		Description:  email.Description,
 	}
 
+	cleanEmail := emailAddress
+	if syntax.IsValid {
+		cleanEmail = fmt.Sprintf("%s@%s", syntax.User, syntax.Domain)
+	}
+
 	response := VerifyEmailResponse{
-		Email:         emailAddress,
+		Email:         cleanEmail,
 		IsDeliverable: email.IsDeliverable,
 		Provider:      domain.Provider,
 		Firewall:      domain.Firewall,

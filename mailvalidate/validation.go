@@ -52,12 +52,12 @@ type SyntaxValidation struct {
 
 func ValidateEmailSyntax(email string) SyntaxValidation {
 	var results SyntaxValidation
-	ok := syntax.IsValidEmailSyntax(email)
+	ok, cleanEmail := syntax.IsValidEmailSyntax(email)
 	if !ok {
 		return results
 	}
 
-	user, domain, ok := syntax.GetEmailUserAndDomain(email)
+	user, domain, ok := syntax.GetEmailUserAndDomain(cleanEmail)
 	if !ok {
 		return results
 	}
@@ -121,10 +121,13 @@ func ValidateDomainWithCustomKnownProviders(validationRequest EmailValidationReq
 	return results, nil
 }
 
-func ValidateEmail(validationRequest EmailValidationRequest) (EmailValidation, error) {
+func ValidateEmail(validationRequest EmailValidationRequest, emailSyntaxResults SyntaxValidation) (EmailValidation, error) {
 	var results EmailValidation
 	if err := validateRequest(&validationRequest); err != nil {
 		return results, errors.Wrap(err, "Invalid request")
+	}
+	if !emailSyntaxResults.IsValid {
+		return results, fmt.Errorf("Invalid email address")
 	}
 
 	freeEmails, err := GetFreeEmailList()
@@ -137,20 +140,22 @@ func ValidateEmail(validationRequest EmailValidationRequest) (EmailValidation, e
 		log.Fatal(err)
 	}
 
-	isFreeEmail, err := IsFreeEmailCheck(validationRequest.Email, freeEmails)
+	email := fmt.Sprintf("%s@%s", emailSyntaxResults.User, emailSyntaxResults.Domain)
+
+	isFreeEmail, err := IsFreeEmailCheck(email, freeEmails)
 	if err != nil {
 		return results, errors.Wrap(err, "Error executing free email check")
 	}
 	results.IsFreeAccount = isFreeEmail
 
-	isRoleAccount, err := IsRoleAccountCheck(validationRequest.Email, roleAccounts)
+	isRoleAccount, err := IsRoleAccountCheck(email, roleAccounts)
 	if err != nil {
 		return results, errors.Wrap(err, "Error executing role account check")
 	}
 	results.IsRoleAccount = isRoleAccount
 
 	isVerified, smtpValidation, err := mailserver.VerifyEmailAddress(
-		validationRequest.Email,
+		email,
 		validationRequest.FromDomain,
 		validationRequest.FromEmail,
 		validationRequest.Dns,
