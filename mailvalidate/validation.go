@@ -13,13 +13,10 @@ import (
 )
 
 type EmailValidationRequest struct {
-	Email                string
-	FromDomain           string
-	FromEmail            string
-	CatchAllTestUser     string
-	ValidateFreeAccounts bool
-	ValidateRoleAccounts bool
-	Proxy                mailserver.ProxySetup
+	Email            string
+	FromDomain       string
+	FromEmail        string
+	CatchAllTestUser string
 }
 
 type DomainValidation struct {
@@ -144,15 +141,10 @@ func ValidateEmail(validationRequest EmailValidationRequest) (EmailValidation, e
 	}
 	results.IsRoleAccount = isRoleAccount
 
-	if isRoleAccount && !validationRequest.ValidateRoleAccounts {
-		return results, nil
-	}
-
 	isVerified, smtpValidation, err := mailserver.VerifyEmailAddress(
 		validationRequest.Email,
 		validationRequest.FromDomain,
 		validationRequest.FromEmail,
-		validationRequest.Proxy,
 	)
 	if err != nil {
 		return results, errors.Wrap(err, "Error validating email via SMTP")
@@ -243,7 +235,6 @@ func catchAllTest(validationRequest EmailValidationRequest) (bool, mailserver.SM
 		catchAllEmail,
 		validationRequest.FromDomain,
 		validationRequest.FromEmail,
-		validationRequest.Proxy,
 	)
 	if err != nil {
 		log.Printf("Error validating email via SMTP: %v", err)

@@ -12,4 +12,34 @@ This is open-source, but we also offer a hosted API that's simple to use. If you
 
 <br />
 
-## Get Started
+## Quickstart 
+
+1. Download the appropriate CLI tarball for your OS:
+
+```
+wget mailsherpa.sh/mailsherpa-linux-arm64.tar.gz
+wget mailsherpa.sh/mailsherpa-linux-amd64.tar.gz
+wget mailsherpa.sh/mailsherpa-macos.tar.gz
+```
+
+2. Extract the binary:
+
+```
+tar -xzf filename.tar.gz
+```
+
+3. Set the `MAIL_SERVER_DOMAIN` environment variable.  See the `Mail Server setup guide` section below for more details:
+
+```
+export MAIL_SERVER_DOMAIN=example.com
+```
+
+4. Test to make sure everything is working
+
+```
+./mailsherpa version
+```
+
+## Mail Server setup guide
+
+You might be asking why you need to setup a mail server...
