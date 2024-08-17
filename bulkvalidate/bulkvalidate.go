@@ -143,7 +143,7 @@ func RunBulkValidation(inputFilePath, outputFilePath string) {
 		if err != nil {
 			log.Printf("Error: %s %s", email, err.Error())
 		}
-		emailResults, err := mailvalidate.ValidateEmail(request, syntaxResults)
+		emailResults, err := mailvalidate.ValidateEmail(request)
 		if err != nil {
 			log.Printf("Error: %s %s", email, err.Error())
 		}

@@ -51,20 +51,20 @@ type SyntaxValidation struct {
 }
 
 func ValidateEmailSyntax(email string) SyntaxValidation {
-	var results SyntaxValidation
-	ok, cleanEmail := syntax.IsValidEmailSyntax(email)
-	if !ok {
-		return results
+	isValid, cleanEmail := syntax.IsValidEmailSyntax(email)
+	if !isValid {
+		return SyntaxValidation{}
 	}
 
 	user, domain, ok := syntax.GetEmailUserAndDomain(cleanEmail)
 	if !ok {
-		return results
+		return SyntaxValidation{}
 	}
-	results.IsValid = true
-	results.User = user
-	results.Domain = domain
-	return results
+	return SyntaxValidation{
+		IsValid: true,
+		User:    user,
+		Domain:  domain,
+	}
 }
 
 func ValidateDomain(validationRequest EmailValidationRequest, validateCatchAll bool) (DomainValidation, error) {
@@ -121,12 +121,13 @@ func ValidateDomainWithCustomKnownProviders(validationRequest EmailValidationReq
 	return results, nil
 }
 
-func ValidateEmail(validationRequest EmailValidationRequest, emailSyntaxResults SyntaxValidation) (EmailValidation, error) {
+func ValidateEmail(validationRequest EmailValidationRequest) (EmailValidation, error) {
 	var results EmailValidation
 	if err := validateRequest(&validationRequest); err != nil {
 		return results, errors.Wrap(err, "Invalid request")
 	}
-	if !emailSyntaxResults.IsValid {
+	emailSyntaxResult := ValidateEmailSyntax(validationRequest.Email)
+	if !emailSyntaxResult.IsValid {
 		return results, fmt.Errorf("Invalid email address")
 	}
 
@@ -140,7 +141,7 @@ func ValidateEmail(validationRequest EmailValidationRequest, emailSyntaxResults 
 		log.Fatal(err)
 	}
 
-	email := fmt.Sprintf("%s@%s", emailSyntaxResults.User, emailSyntaxResults.Domain)
+	email := fmt.Sprintf("%s@%s", emailSyntaxResult.User, emailSyntaxResult.Domain)
 
 	isFreeEmail, err := IsFreeEmailCheck(email, freeEmails)
 	if err != nil {
