@@ -3,8 +3,12 @@ package syntax
 import (
 	"regexp"
 	"strings"
+	"unicode"
 
 	"golang.org/x/net/publicsuffix"
+	"golang.org/x/text/runes"
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 )
 
 var (
@@ -12,17 +16,31 @@ var (
 	domainRegex   = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])*$`)
 )
 
-func IsValidEmailSyntax(email string) bool {
+func IsValidEmailSyntax(email string) (bool, string) {
+	normalizedEmail := convertToAscii(email)
+
 	if !isValidEmailFormat(email) {
-		return false
+		return false, ""
 	}
 
 	username, domain, ok := splitEmail(email)
 	if !ok {
-		return false
+		return false, ""
 	}
 
-	return isValidUsername(username) && isValidDomain(domain)
+	return isValidUsername(username) && isValidDomain(domain), normalizedEmail
+}
+
+func GetEmailUserAndDomain(email string) (string, string, bool) {
+	if strings.TrimSpace(email) != email {
+		return "", "", false
+	}
+	user, domain, ok := splitEmail(email)
+	if !isValidUsername(user) || !isValidDomain(domain) {
+		return "", "", false
+	}
+
+	return user, domain, ok
 }
 
 func isValidEmailFormat(email string) bool {
@@ -90,14 +108,17 @@ func isValidTLD(tld string) bool {
 	return icann
 }
 
-func GetEmailUserAndDomain(email string) (string, string, bool) {
-	if strings.TrimSpace(email) != email {
-		return "", "", false
-	}
-	user, domain, ok := splitEmail(email)
-	if !isValidUsername(user) || !isValidDomain(domain) {
-		return "", "", false
+func convertToAscii(input string) string {
+	t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
+	result, _, _ := transform.String(t, input)
+
+	// Step 2: Remove any remaining non-ASCII characters
+	ascii := make([]rune, 0, len(result))
+	for _, r := range result {
+		if r <= unicode.MaxASCII {
+			ascii = append(ascii, r)
+		}
 	}
 
-	return user, domain, ok
+	return string(ascii)
 }

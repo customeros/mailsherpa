@@ -35,7 +35,7 @@ func TestIsValidEmailSyntax(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IsValidEmailSyntax(tt.email); got != tt.want {
+			if got, _ := IsValidEmailSyntax(tt.email); got != tt.want {
 				t.Errorf("IsValidEmailSyntax(%q) = %v, want %v", tt.email, got, tt.want)
 			}
 		})
