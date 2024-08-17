@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/proxy"
-
 	"github.com/customeros/mailsherpa/internal/dns"
 )
 
@@ -30,7 +28,7 @@ type ProxySetup struct {
 	Password string
 }
 
-func VerifyEmailAddress(email, fromDomain, fromEmail string, proxy ProxySetup) (bool, SMPTValidation, error) {
+func VerifyEmailAddress(email, fromDomain, fromEmail string) (bool, SMPTValidation, error) {
 	results := SMPTValidation{}
 	var isVerified bool
 
@@ -46,12 +44,7 @@ func VerifyEmailAddress(email, fromDomain, fromEmail string, proxy ProxySetup) (
 	var conn net.Conn
 	var client *bufio.Reader
 
-	if proxy.Enable {
-		fmt.Println("Enabling proxy...")
-		conn, client, err = connectToSMTPviaProxy(mxServers[0], proxy.Address, proxy.Username, proxy.Password)
-	} else {
-		conn, client, err = connectToSMTP(mxServers[0])
-	}
+	conn, client, err = connectToSMTP(mxServers[0])
 	if err != nil {
 		return false, results, err
 	}
@@ -82,32 +75,6 @@ func connectToSMTP(mxServer string) (net.Conn, *bufio.Reader, error) {
 	conn, err := net.DialTimeout("tcp", mxServer+":25", 10*time.Second)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to connect to SMTP server: %w", err)
-	}
-
-	client := bufio.NewReader(conn)
-	return conn, client, nil
-}
-
-func connectToSMTPviaProxy(mxServer, proxyAddress, proxyUsername, proxyPassword string) (net.Conn, *bufio.Reader, error) {
-	auth := &proxy.Auth{
-		User:     proxyUsername,
-		Password: proxyPassword,
-	}
-
-	dialer, err := proxy.SOCKS5("tcp", proxyAddress, auth, proxy.Direct)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Failed to connect proxy dialer: %w", err)
-	}
-
-	conn, err := dialer.Dial("tcp", mxServer+":25")
-	if err != nil {
-		return nil, nil, fmt.Errorf("Failed to connect to SMTP server via proxy: %w", err)
-	}
-
-	err = conn.SetDeadline(time.Now().Add(30 * time.Second))
-	if err != nil {
-		conn.Close()
-		return nil, nil, fmt.Errorf("Failed to set connection deadline: %w", err)
 	}
 
 	client := bufio.NewReader(conn)

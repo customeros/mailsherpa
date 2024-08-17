@@ -2,15 +2,9 @@ package run
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/customeros/mailsherpa/mailvalidate"
-)
-
-const (
-	fromDomain            = "gmail.com"
-	validateFreeAccounts  = true
-	validateRoleMailboxes = true
-	Version               = "0.0.10"
 )
 
 type VerifyEmailResponse struct {
@@ -43,14 +37,17 @@ type Smtp struct {
 
 func BuildRequest(email string) mailvalidate.EmailValidationRequest {
 	firstname, lastname := mailvalidate.GenerateNames()
+	fromDomain, exists := os.LookupEnv("MAIL_SERVER_DOMAIN")
+	if !exists {
+		fmt.Println("MAIL_SERVER_DOMAIN environment variable not set")
+		os.Exit(1)
+	}
 
 	request := mailvalidate.EmailValidationRequest{
-		Email:                email,
-		FromDomain:           fromDomain,
-		FromEmail:            fmt.Sprintf("%s.%s@%s", firstname, lastname, fromDomain),
-		CatchAllTestUser:     mailvalidate.GenerateCatchAllUsername(),
-		ValidateFreeAccounts: validateFreeAccounts,
-		ValidateRoleAccounts: validateRoleMailboxes,
+		Email:            email,
+		FromDomain:       fromDomain,
+		FromEmail:        fmt.Sprintf("%s.%s@%s", firstname, lastname, fromDomain),
+		CatchAllTestUser: mailvalidate.GenerateCatchAllUsername(),
 	}
 	return request
 }

@@ -9,6 +9,8 @@ import (
 	"github.com/customeros/mailsherpa/mailvalidate"
 )
 
+var version = "dev"
+
 func PrintUsage() {
 	fmt.Println("Usage: mailsherpa <command> [arguments]")
 	fmt.Println("Commands:")
@@ -59,7 +61,7 @@ func VerifyEmail(email string) {
 }
 
 func Version() {
-	fmt.Println("MailSherpa", run.Version)
+	fmt.Printf("MailSherpa %s\n", version)
 }
 
 func printOutput(response interface{}) {
