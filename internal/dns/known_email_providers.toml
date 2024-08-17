@@ -101,6 +101,7 @@ domains = [
     ["ondmarc.com", "ondmarc"],
     ["powerspf.com", "power spf"],
     ["pphosted.com", "proofpoint"],
+    ["ppe-hosted.com", "proofpoint"],
     ["redpoints.com", "red points"],
     ["reflexion.net", "sophos"],
     ["res.cisco.com", "cisco"],
