@@ -1,6 +1,7 @@
 package syntax
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"unicode"
@@ -13,7 +14,7 @@ import (
 
 var (
 	usernameRegex = regexp.MustCompile(`^[\p{L}\p{N}.!#$%&'+-/=?^_` + "`" + `{|}~]+$`)
-	domainRegex   = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])*$`)
+	domainRegex   = regexp.MustCompile(`^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$`)
 )
 
 func IsValidEmailSyntax(email string) (bool, string) {
@@ -84,6 +85,7 @@ func isValidDomain(domain string) bool {
 
 	// Check if the domain matches the regex pattern
 	if !domainRegex.MatchString(domain) {
+		fmt.Println("here2")
 		return false
 	}
 

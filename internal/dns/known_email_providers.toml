@@ -88,6 +88,7 @@ domains = [
     ["agari.com", "agari"],
     ["antispam.mailspamprotection.com", "mail spam protection"],
     ["barracudanetworks.com", "barracuda"],
+    ["daemonmail.net", "daemonmail"],
     ["edgepilot.com", "edge pilot"],
     ["egress.com", "egress"],
     ["encrypttitan.net", "encrypt titan"],
@@ -111,6 +112,8 @@ domains = [
     ["spamexperts.com", "solarwinds"],
     ["tacklephishing.com", "tackle phishing"],
     ["trendmicro.com", "trendmicro"],
+    ["trendmicro.eu", "trendmicro"],
+    ["vadesecure.com", "vade secure"],
     ["worldsecuresystems.com", "world secure systems"],
     ["zixmail.net", "zix"]
 ]
