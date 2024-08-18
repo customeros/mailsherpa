@@ -60,10 +60,6 @@ func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS)
 
 	defer conn.Close()
 
-	// if err := readSMTPgreeting(client); err != nil {
-	//		return false, results, err
-	//	}
-
 	if err := sendHELO(conn, client, fromDomain); err != nil {
 		return false, results, err
 	}
