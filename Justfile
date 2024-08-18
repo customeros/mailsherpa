@@ -19,18 +19,18 @@ clean:
     rm -f mailsherpa-*
 
 dist:
-	build-macos
+	just build-macos
 	tar -czpf mailsherpa-macos.tar.gz mailsherpa-macos
 	aws s3 cp ./mailsherpa-macos.tar.gz $CLOUDFLARE_R2_BUCKET/mailsherpa-macos.tar.gz --endpoint-url $CLOUDFLARE_R2_ENDPOINT
 
-	build-linux-amd64
+	just build-linux-amd64
 	tar -czpf mailsherpa-linux-amd64.tar.gz mailsherpa-linux-amd64
 	aws s3 cp ./mailsherpa-linux-amd64.tar.gz $CLOUDFLARE_R2_BUCKET/mailsherpa-linux-amd64.tar.gz --endpoint-url $CLOUDFLARE_R2_ENDPOINT
 
-	build-linux-arm64
+	just build-linux-arm64
 	tar -czpf mailsherpa-linux-arm64.tar.gz mailsherpa-linux-arm64
 	aws s3 cp ./mailsherpa-linux-arm64.tar.gz $CLOUDFLARE_R2_BUCKET/mailsherpa-linux-arm64.tar.gz --endpoint-url $CLOUDFLARE_R2_ENDPOINT
-	clean
+	just clean
 
 test:
     go test ./...
