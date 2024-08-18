@@ -44,6 +44,10 @@ func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS)
 
 	for i := 0; i < len(dnsRecords.MX); i++ {
 		conn, client, err = connectToSMTP(dnsRecords.MX[i])
+		if err != nil {
+			continue
+		}
+		err := readSMTPgreeting(client)
 		if err == nil {
 			connected = true
 			break
@@ -55,10 +59,6 @@ func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS)
 	}
 
 	defer conn.Close()
-
-	if err := readSMTPgreeting(client); err != nil {
-		return false, results, err
-	}
 
 	if err := sendHELO(conn, client, fromDomain); err != nil {
 		return false, results, err
