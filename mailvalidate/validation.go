@@ -45,9 +45,10 @@ type EmailValidation struct {
 }
 
 type SyntaxValidation struct {
-	IsValid bool
-	User    string
-	Domain  string
+	IsValid    bool
+	User       string
+	Domain     string
+	CleanEmail string
 }
 
 func ValidateEmailSyntax(email string) SyntaxValidation {
@@ -61,9 +62,10 @@ func ValidateEmailSyntax(email string) SyntaxValidation {
 		return SyntaxValidation{}
 	}
 	return SyntaxValidation{
-		IsValid: true,
-		User:    user,
-		Domain:  domain,
+		IsValid:    true,
+		User:       user,
+		Domain:     domain,
+		CleanEmail: cleanEmail,
 	}
 }
 
