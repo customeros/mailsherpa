@@ -117,10 +117,10 @@ func writeResultsFile(results []run.VerifyEmailResponse, filePath string) error 
 	return nil
 }
 
-func RunBulkValidation(inputFilePath, outputFilePath string) {
+func RunBulkValidation(inputFilePath, outputFilePath string) error {
 	testEmails, err := read_csv(inputFilePath)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("error reading input file: %w", err)
 	}
 
 	catchAllResults := make(map[string]bool)
@@ -159,6 +159,8 @@ func RunBulkValidation(inputFilePath, outputFilePath string) {
 		output = append(output, results)
 	}
 	writeResultsFile(output, outputFilePath)
+
+	return nil
 }
 
 func generateCatchAllUsername() string {
