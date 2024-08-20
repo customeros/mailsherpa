@@ -21,8 +21,8 @@ func PrintUsage() {
 	fmt.Println("  version")
 }
 
-func BulkVerify(inputFilePath, outputFilePath string) {
-	bulkvalidate.RunBulkValidation(inputFilePath, outputFilePath)
+func BulkVerify(inputFilePath, outputFilePath string) error {
+	return bulkvalidate.RunBulkValidation(inputFilePath, outputFilePath)
 }
 
 func VerifyDomain(domain string, printResults bool) mailvalidate.DomainValidation {

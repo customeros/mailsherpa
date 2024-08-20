@@ -72,7 +72,7 @@ func ValidateEmailSyntax(email string) SyntaxValidation {
 func ValidateDomain(validationRequest EmailValidationRequest, validateCatchAll bool) (DomainValidation, error) {
 	knownProviders, err := dns.GetKnownProviders()
 	if err != nil {
-		log.Fatal(err)
+		return DomainValidation{}, errors.Wrap(err, "Error getting known providers")
 	}
 	return ValidateDomainWithCustomKnownProviders(validationRequest, *knownProviders, validateCatchAll)
 }
@@ -135,12 +135,12 @@ func ValidateEmail(validationRequest EmailValidationRequest) (EmailValidation, e
 
 	freeEmails, err := GetFreeEmailList()
 	if err != nil {
-		log.Fatal(err)
+		return results, errors.Wrap(err, "Error getting free email list")
 	}
 
 	roleAccounts, err := GetRoleAccounts()
 	if err != nil {
-		log.Fatal(err)
+		return results, errors.Wrap(err, "Error getting role accounts")
 	}
 
 	email := fmt.Sprintf("%s@%s", emailSyntaxResult.User, emailSyntaxResult.Domain)
