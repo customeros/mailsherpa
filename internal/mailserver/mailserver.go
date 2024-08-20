@@ -156,6 +156,12 @@ func sendRCPTTO(conn net.Conn, smtpClient *bufio.Reader, emailToValidate string)
 	case "251":
 		results.CanConnectSmtp = true
 		isValid = true
+	case "452":
+		results.CanConnectSmtp = true
+		if results.ErrorCode == "4.2.2" {
+			results.InboxFull = true
+			isValid = false
+		}
 	case "552":
 		results.InboxFull = true
 		results.CanConnectSmtp = true
