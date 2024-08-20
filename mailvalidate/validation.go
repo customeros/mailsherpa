@@ -212,6 +212,12 @@ func handleSmtpResponses(resp EmailValidation) EmailValidation {
 		if resp.ErrorCode == "4.7.1" {
 			resp.RetryValidation = true
 		}
+	case "452":
+		if resp.ErrorCode == "4.2.2" {
+			resp.SmtpSuccess = true
+			resp.ErrorCode = ""
+			resp.Description = ""
+		}
 	case "501":
 		if strings.Contains(resp.Description, "Invalid address") {
 			resp.SmtpSuccess = true
@@ -230,12 +236,17 @@ func handleSmtpResponses(resp EmailValidation) EmailValidation {
 			resp.ErrorCode = ""
 			resp.Description = ""
 		}
-		if resp.ErrorCode == "5.2.1" || resp.ErrorCode == "5.7.1" || resp.ErrorCode == "5.1.1" || resp.ErrorCode == "5.1.6" || resp.ErrorCode == "5.1.0" {
+		if resp.ErrorCode == "5.2.1" || resp.ErrorCode == "5.7.1" || resp.ErrorCode == "5.1.1" || resp.ErrorCode == "5.1.6" || resp.ErrorCode == "5.1.0" || resp.ErrorCode == "5.4.1" {
 			resp.SmtpSuccess = true
 			resp.ErrorCode = ""
 			resp.Description = ""
 		}
-
+	case "554":
+		if resp.ErrorCode == "5.7.1" {
+			resp.SmtpSuccess = true
+			resp.ErrorCode = ""
+			resp.Description = ""
+		}
 	}
 	return resp
 }
