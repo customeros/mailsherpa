@@ -223,6 +223,11 @@ func handleSmtpResponses(resp EmailValidation) EmailValidation {
 		if resp.ErrorCode == "4.7.1" {
 			resp.RetryValidation = true
 		}
+		if resp.ErrorCode == "4.4.4" {
+			resp.SmtpSuccess = true
+			resp.ErrorCode = ""
+			resp.Description = ""
+		}
 	case "452":
 		if resp.ErrorCode == "4.2.2" {
 			resp.SmtpSuccess = true
