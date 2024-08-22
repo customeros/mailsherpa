@@ -10,7 +10,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/lucasepe/codename"
 	"github.com/schollz/progressbar/v3"
@@ -174,43 +173,28 @@ func readBatch(reader *csv.Reader, batchSize int) ([]string, error) {
 
 func processBatch(batch []string, catchAllResults map[string]bool) []run.VerifyEmailResponse {
 	var results []run.VerifyEmailResponse
-	var wg sync.WaitGroup
-	resultsChan := make(chan run.VerifyEmailResponse, len(batch))
 
 	for _, email := range batch {
-		wg.Add(1)
-		go func(email string) {
-			defer wg.Done()
-			request := run.BuildRequest(email)
-			_, domain, _ := syntax.GetEmailUserAndDomain(email)
-			validateCatchAll := false
-			if _, exists := catchAllResults[domain]; !exists {
-				validateCatchAll = true
-			}
-			syntaxResults := mailvalidate.ValidateEmailSyntax(email)
-			domainResults, err := mailvalidate.ValidateDomain(request, validateCatchAll)
-			if err != nil {
-				log.Printf("Error: %s %s", email, err.Error())
-			}
-			emailResults, err := mailvalidate.ValidateEmail(request)
-			if err != nil {
-				log.Printf("Error: %s %s", email, err.Error())
-			}
-			isCatchAll := domainResults.IsCatchAll
-			if validateCatchAll {
-				catchAllResults[domain] = isCatchAll
-			} else {
-				isCatchAll = catchAllResults[domain]
-			}
-			results := run.BuildResponse(email, syntaxResults, domainResults, emailResults)
-			resultsChan <- results
-		}(email)
-	}
-
-	wg.Wait()
-	close(resultsChan)
-
-	for result := range resultsChan {
+		request := run.BuildRequest(email)
+		_, domain, _ := syntax.GetEmailUserAndDomain(email)
+		validateCatchAll := false
+		if _, exists := catchAllResults[domain]; !exists {
+			validateCatchAll = true
+		}
+		syntaxResults := mailvalidate.ValidateEmailSyntax(email)
+		domainResults, err := mailvalidate.ValidateDomain(request, validateCatchAll)
+		if err != nil {
+			log.Printf("Error validating domain for %s: %s", email, err.Error())
+		}
+		emailResults, err := mailvalidate.ValidateEmail(request)
+		if err != nil {
+			log.Printf("Error validating email for %s: %s", email, err.Error())
+		}
+		isCatchAll := domainResults.IsCatchAll
+		if validateCatchAll {
+			catchAllResults[domain] = isCatchAll
+		}
+		result := run.BuildResponse(email, syntaxResults, domainResults, emailResults)
 		results = append(results, result)
 	}
 
