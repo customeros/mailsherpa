@@ -251,12 +251,22 @@ func handleSmtpResponses(resp EmailValidation) EmailValidation {
 			resp.SmtpSuccess = true
 			resp.ErrorCode = ""
 			resp.Description = ""
-		} else if resp.ErrorCode == "5.2.1" || resp.ErrorCode == "5.7.1" || resp.ErrorCode == "5.1.1" || resp.ErrorCode == "5.1.6" || resp.ErrorCode == "5.1.0" || resp.ErrorCode == "5.4.1" {
+		} else if resp.ErrorCode == "5.2.1" || resp.ErrorCode == "5.1.1" || resp.ErrorCode == "5.1.6" || resp.ErrorCode == "5.1.0" || resp.ErrorCode == "5.4.1" {
 			resp.SmtpSuccess = true
 			resp.ErrorCode = ""
 			resp.Description = ""
 		} else if resp.ErrorCode == "5.7.511" {
 			resp.RetryValidation = true
+		} else if resp.ErrorCode == "5.7.1" {
+			if strings.Contains(resp.Description, "relaying denied") ||
+				strings.Contains(resp.Description, "No such user") ||
+				strings.Contains(resp.Description, "message was not delivered") {
+				resp.SmtpSuccess = true
+				resp.ErrorCode = ""
+				resp.Description = ""
+			} else {
+				resp.RetryValidation = true
+			}
 		}
 	case "554":
 		if resp.ErrorCode == "5.7.1" {
