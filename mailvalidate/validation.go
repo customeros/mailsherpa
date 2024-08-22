@@ -255,7 +255,7 @@ func handleSmtpResponses(resp EmailValidation) EmailValidation {
 			resp.SmtpSuccess = true
 			resp.ErrorCode = ""
 			resp.Description = ""
-		} else if resp.ErrorCode == "5.7.111" {
+		} else if resp.ErrorCode == "5.7.511" {
 			resp.RetryValidation = true
 		}
 	case "554":
