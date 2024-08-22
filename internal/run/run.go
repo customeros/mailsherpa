@@ -44,12 +44,13 @@ func BuildRequest(email string) mailvalidate.EmailValidationRequest {
 		os.Exit(1)
 	}
 
+	dnsFromEmail := dns.GetDNS(email)
 	request := mailvalidate.EmailValidationRequest{
 		Email:            email,
 		FromDomain:       fromDomain,
 		FromEmail:        fmt.Sprintf("%s.%s@%s", firstname, lastname, fromDomain),
 		CatchAllTestUser: mailvalidate.GenerateCatchAllUsername(),
-		Dns:              dns.GetDNS(email),
+		Dns:              &dnsFromEmail,
 	}
 	return request
 }

@@ -17,7 +17,7 @@ type EmailValidationRequest struct {
 	FromDomain       string
 	FromEmail        string
 	CatchAllTestUser string
-	Dns              dns.DNS
+	Dns              *dns.DNS
 }
 
 type DomainValidation struct {
@@ -83,9 +83,14 @@ func ValidateDomainWithCustomKnownProviders(validationRequest EmailValidationReq
 		return results, errors.Wrap(err, "Invalid request")
 	}
 
+	if validationRequest.Dns == nil {
+		dnsFromEmail := dns.GetDNS(validationRequest.Email)
+		validationRequest.Dns = &dnsFromEmail
+	}
+
 	if len(validationRequest.Dns.MX) != 0 {
 		results.HasMXRecord = true
-		provider, firewall := dns.GetEmailProviderFromMx(validationRequest.Dns, knownProviders)
+		provider, firewall := dns.GetEmailProviderFromMx(*validationRequest.Dns, knownProviders)
 		results.Provider = provider
 		if firewall != "" {
 			results.Firewall = firewall
@@ -95,7 +100,7 @@ func ValidateDomainWithCustomKnownProviders(validationRequest EmailValidationReq
 
 	if validationRequest.Dns.SPF != "" {
 		results.HasSPFRecord = true
-		authorizedSenders := dns.GetAuthorizedSenders(validationRequest.Dns, &knownProviders)
+		authorizedSenders := dns.GetAuthorizedSenders(*validationRequest.Dns, &knownProviders)
 		results.AuthorizedSenders = authorizedSenders
 	}
 
@@ -125,6 +130,12 @@ func ValidateDomainWithCustomKnownProviders(validationRequest EmailValidationReq
 
 func ValidateEmail(validationRequest EmailValidationRequest) (EmailValidation, error) {
 	var results EmailValidation
+
+	if validationRequest.Dns == nil {
+		dnsFromEmail := dns.GetDNS(validationRequest.Email)
+		validationRequest.Dns = &dnsFromEmail
+	}
+
 	if err := validateRequest(&validationRequest); err != nil {
 		return results, errors.Wrap(err, "Invalid request")
 	}
@@ -161,7 +172,7 @@ func ValidateEmail(validationRequest EmailValidationRequest) (EmailValidation, e
 		email,
 		validationRequest.FromDomain,
 		validationRequest.FromEmail,
-		validationRequest.Dns,
+		*validationRequest.Dns,
 	)
 	if err != nil {
 		return results, errors.Wrap(err, "Error validating email via SMTP")
@@ -263,7 +274,7 @@ func catchAllTest(validationRequest EmailValidationRequest) (bool, mailserver.SM
 		catchAllEmail,
 		validationRequest.FromDomain,
 		validationRequest.FromEmail,
-		validationRequest.Dns,
+		*validationRequest.Dns,
 	)
 	if err != nil {
 		log.Printf("Error validating email via SMTP: %v", err)
