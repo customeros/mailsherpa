@@ -220,7 +220,7 @@ func handleSmtpResponses(resp EmailValidation) EmailValidation {
 			resp.ErrorCode = ""
 			resp.Description = ""
 		}
-		if resp.ErrorCode == "4.7.1" {
+		if resp.ErrorCode == "4.7.1" || resp.ErrorCode == "4.3.2" {
 			resp.RetryValidation = true
 		}
 		if resp.ErrorCode == "4.4.4" {
