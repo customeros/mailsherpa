@@ -2,8 +2,8 @@ package mailserver
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 	"net"
 	"regexp"
 	"strings"
@@ -47,7 +47,7 @@ func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS)
 		if err != nil {
 			continue
 		}
-		err := readSMTPgreeting(client)
+		err = readSMTPgreeting(client)
 		if err == nil {
 			connected = true
 			break
@@ -55,22 +55,22 @@ func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS)
 	}
 
 	if !connected {
-		return false, results, fmt.Errorf("failed to connect to any MX server: %w", err)
+		return false, results, errors.Wrap(err, "Failed to connect to any SMTP server")
 	}
 
 	defer conn.Close()
 
-	if err := sendHELO(conn, client, fromDomain); err != nil {
-		return false, results, err
+	if err = sendHELO(conn, client, fromDomain); err != nil {
+		return false, results, errors.Wrap(err, "Failed to send HELO command")
 	}
 
-	if err := sendMAILFROM(conn, client, fromEmail); err != nil {
-		return false, results, err
+	if err = sendMAILFROM(conn, client, fromEmail); err != nil {
+		return false, results, errors.Wrap(err, "Failed to send MAIL FROM command")
 	}
 
 	isVerified, results, err = sendRCPTTO(conn, client, email)
 	if err != nil {
-		return false, SMPTValidation{}, err
+		return false, SMPTValidation{}, errors.Wrap(err, "Failed to send RCPT TO command")
 	}
 
 	return isVerified, results, nil
@@ -79,7 +79,7 @@ func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS)
 func connectToSMTP(mxServer string) (net.Conn, *bufio.Reader, error) {
 	conn, err := net.DialTimeout("tcp", mxServer+":25", 10*time.Second)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Failed to connect to SMTP server: %w", err)
+		return nil, nil, errors.Wrap(err, "failed to connect to SMTP server")
 	}
 
 	client := bufio.NewReader(conn)
@@ -90,7 +90,7 @@ func readSMTPgreeting(smtpClient *bufio.Reader) error {
 	for {
 		line, err := smtpClient.ReadString('\n')
 		if err != nil {
-			return fmt.Errorf("Failed to read SMTP server greeting: %w", err)
+			return errors.Wrap(err, "Failed to read SMTP server greeting")
 		}
 
 		// Trim the line to remove whitespace and newline characters
@@ -112,11 +112,11 @@ func readSMTPgreeting(smtpClient *bufio.Reader) error {
 func sendSMTPcommand(conn net.Conn, smtpClient *bufio.Reader, cmd string) (string, error) {
 	_, err := fmt.Fprintf(conn, cmd+"\r\n")
 	if err != nil {
-		return "", fmt.Errorf("failed to send SMTP command %s: %w", cmd, err)
+		return "", fmt.Errorf("failed to send SMTP command %s: %s", cmd, err.Error())
 	}
 	resp, err := smtpClient.ReadString('\n')
 	if err != nil {
-		return "", fmt.Errorf("failed to read response for SMTP command %s: %w", cmd, err)
+		return "", fmt.Errorf("failed to read response for SMTP command %s: %s", cmd, err.Error())
 	}
 	return resp, nil
 }
@@ -143,7 +143,7 @@ func sendRCPTTO(conn net.Conn, smtpClient *bufio.Reader, emailToValidate string)
 	rcpt := fmt.Sprintf("RCPT TO:<%s>", emailToValidate)
 	resp, err := sendSMTPcommand(conn, smtpClient, rcpt)
 	if err != nil {
-		return false, results, fmt.Errorf("RCPT TO command failed: %w", err)
+		return false, results, errors.Wrap(err, "RCPT TO command failed")
 	}
 
 	results.SmtpResponse = resp
