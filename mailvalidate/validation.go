@@ -269,7 +269,7 @@ func handleSmtpResponses(resp EmailValidation) EmailValidation {
 			}
 		}
 	case "554":
-		if resp.ErrorCode == "5.7.1" {
+		if resp.ErrorCode == "5.7.1" || resp.ErrorCode == "5.1.1" {
 			resp.SmtpSuccess = true
 			resp.ErrorCode = ""
 			resp.Description = ""
