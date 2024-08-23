@@ -207,10 +207,14 @@ func handleSmtpResponses(resp EmailValidation) EmailValidation {
 		if strings.Contains(resp.Description, "Internal resources are temporarily unavailable") ||
 			strings.Contains(resp.Description, "Account service is temporarily unavailable") ||
 			strings.Contains(resp.Description, "Recipient Temporarily Unavailable") ||
-			strings.Contains(resp.Description, "IP Temporarily Blacklisted") {
+			strings.Contains(resp.Description, "IP Temporarily Blacklisted") ||
+			strings.Contains(resp.Description, "please retry later") ||
+			strings.Contains(resp.Description, "not yet authorized to deliver mail from") ||
+			strings.Contains(resp.Description, "Internal resource temporarily unavailable") ||
+			strings.Contains(resp.Description, "Please try again later") {
 			resp.RetryValidation = true
 		}
-		if resp.Description == "Account inbounds disabled" {
+		if strings.Contains(resp.Description, "Account inbounds disabled") {
 			resp.SmtpSuccess = true
 			resp.ErrorCode = ""
 			resp.Description = ""
@@ -220,13 +224,14 @@ func handleSmtpResponses(resp EmailValidation) EmailValidation {
 			resp.ErrorCode = ""
 			resp.Description = ""
 		}
-		if resp.ErrorCode == "4.7.1" || resp.ErrorCode == "4.3.2" {
+		if resp.ErrorCode == "4.7.1" || resp.ErrorCode == "4.3.2" || resp.ErrorCode == "4.3.0" {
 			resp.RetryValidation = true
 		}
 		if resp.ErrorCode == "4.4.4" {
 			resp.SmtpSuccess = true
 			resp.ErrorCode = ""
 			resp.Description = ""
+			resp.ResponseCode = "550"
 		}
 	case "452":
 		if resp.ErrorCode == "4.2.2" {
@@ -235,7 +240,8 @@ func handleSmtpResponses(resp EmailValidation) EmailValidation {
 			resp.Description = ""
 		}
 	case "501":
-		if strings.Contains(resp.Description, "Invalid address") {
+		if strings.Contains(resp.Description, "Invalid address") ||
+			strings.Contains(resp.Description, "Bad address syntax") {
 			resp.SmtpSuccess = true
 			resp.ErrorCode = ""
 			resp.Description = ""
@@ -247,11 +253,22 @@ func handleSmtpResponses(resp EmailValidation) EmailValidation {
 			resp.Description = ""
 		}
 	case "550":
-		if strings.Contains(resp.Description, "Invalid Recipient") || strings.Contains(resp.Description, "Recipient not found") {
+		if strings.Contains(resp.Description, "Invalid Recipient") ||
+			strings.Contains(resp.Description, "Invalid recipient") ||
+			strings.Contains(resp.Description, "Recipient not found") ||
+			strings.Contains(resp.Description, "verify address failed") ||
+			strings.Contains(resp.Description, "mailbox unavailable") ||
+			strings.Contains(resp.Description, "no mailbox by that name") ||
+			strings.Contains(resp.Description, "No such local user") ||
+			strings.Contains(resp.Description, "No Such User Here") ||
+			strings.Contains(resp.Description, "User not found") ||
+			strings.Contains(resp.Description, "No such ID") ||
+			strings.Contains(resp.Description, "Address unknown") ||
+			strings.Contains(resp.Description, "relay not permitted") {
 			resp.SmtpSuccess = true
 			resp.ErrorCode = ""
 			resp.Description = ""
-		} else if resp.ErrorCode == "5.2.1" || resp.ErrorCode == "5.1.1" || resp.ErrorCode == "5.1.6" || resp.ErrorCode == "5.1.0" || resp.ErrorCode == "5.4.1" {
+		} else if resp.ErrorCode == "5.0.0" || resp.ErrorCode == "5.2.1" || resp.ErrorCode == "5.1.1" || resp.ErrorCode == "5.1.6" || resp.ErrorCode == "5.1.0" || resp.ErrorCode == "5.4.1" || resp.ErrorCode == "5.2.0" || resp.ErrorCode == "5.5.1" {
 			resp.SmtpSuccess = true
 			resp.ErrorCode = ""
 			resp.Description = ""
@@ -260,20 +277,35 @@ func handleSmtpResponses(resp EmailValidation) EmailValidation {
 		} else if resp.ErrorCode == "5.7.1" {
 			if strings.Contains(resp.Description, "relaying denied") ||
 				strings.Contains(resp.Description, "No such user") ||
-				strings.Contains(resp.Description, "message was not delivered") {
+				strings.Contains(resp.Description, "message was not delivered") ||
+				strings.Contains(resp.Description, "I am no longer") {
 				resp.SmtpSuccess = true
 				resp.ErrorCode = ""
 				resp.Description = ""
 			} else {
 				resp.RetryValidation = true
 			}
+		} else if strings.Contains(resp.Description, "blocked using Trend Micro") {
+			resp.RetryValidation = true
+		}
+	case "551":
+		resp.SmtpSuccess = true
+		if resp.ErrorCode == "5.1.1" {
+			resp.ErrorCode = ""
+			resp.Description = ""
 		}
 	case "554":
-		if resp.ErrorCode == "5.7.1" || resp.ErrorCode == "5.1.1" {
+		if resp.ErrorCode == "5.7.1" ||
+			resp.ErrorCode == "5.1.1" ||
+			strings.Contains(resp.Description, "doesn't exist") {
 			resp.SmtpSuccess = true
 			resp.ErrorCode = ""
 			resp.Description = ""
 		}
+	case "571":
+		resp.SmtpSuccess = true
+		resp.ErrorCode = ""
+		resp.Description = ""
 	}
 	return resp
 }
