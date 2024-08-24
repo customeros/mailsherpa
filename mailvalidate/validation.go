@@ -267,11 +267,39 @@ func handleSmtpResponses(resp EmailValidation) (EmailValidation, MailServerHealt
 	case "501", "503", "550", "551", "552", "554", "557":
 		resp.RetryValidation = true
 
+		if strings.Contains(resp.Description, "Access denied, banned sender") ||
+			strings.Contains(resp.Description, "barracudanetworks.com/reputation") ||
+			strings.Contains(resp.Description, "black list") ||
+			strings.Contains(resp.Description, "Blocked") ||
+			strings.Contains(resp.Description, "blocked using") ||
+			strings.Contains(resp.Description, "envelope blocked") ||
+			strings.Contains(resp.Description, "ERS-DUL") ||
+			strings.Contains(resp.Description, "Listed by PBL") ||
+			strings.Contains(resp.Description, "rejected by Abusix blacklist") {
+
+			health.IsBlacklisted = true
+			ip, err := ipify.GetIp()
+			if err != nil {
+				log.Println("Unable to obtain Mailserver IP")
+			}
+			health.ServerIP = ip
+			resp.SmtpSuccess = false
+			resp.RetryValidation = true
+		}
+
+		if strings.Contains(resp.Description, "user is over quota") ||
+			strings.Contains(resp.Description, "out of storage") {
+
+			resp.IsMailboxFull = true
+			resp.SmtpSuccess = true
+			resp.RetryValidation = false
+		}
+
 		if strings.Contains(resp.Description, "Address unknown") ||
 			strings.Contains(resp.Description, "Bad address syntax") ||
 			strings.Contains(resp.Description, "cannot deliver mail") ||
 			strings.Contains(resp.Description, "could not deliver mail") ||
-			strings.Contains(resp.Description, "doesn't exist") ||
+			strings.Contains(resp.Description, "dosn't exist") ||
 			strings.Contains(resp.Description, "I am no longer") ||
 			strings.Contains(resp.Description, "Invalid address") ||
 			strings.Contains(resp.Description, "Invalid Recipient") ||
@@ -316,33 +344,6 @@ func handleSmtpResponses(resp EmailValidation) (EmailValidation, MailServerHealt
 			resp.RetryValidation = false
 		}
 
-		if strings.Contains(resp.Description, "Access denied, banned sender") ||
-			strings.Contains(resp.Description, "barracudanetworks.com/reputation") ||
-			strings.Contains(resp.Description, "black list") ||
-			strings.Contains(resp.Description, "Blocked") ||
-			strings.Contains(resp.Description, "blocked using") ||
-			strings.Contains(resp.Description, "envelope blocked") ||
-			strings.Contains(resp.Description, "ERS-DUL") ||
-			strings.Contains(resp.Description, "Listed by PBL") ||
-			strings.Contains(resp.Description, "rejected by Abusix blacklist") {
-
-			health.IsBlacklisted = true
-			ip, err := ipify.GetIp()
-			if err != nil {
-				log.Println("Unable to obtain Mailserver IP")
-			}
-			health.ServerIP = ip
-			resp.SmtpSuccess = false
-			resp.RetryValidation = true
-		}
-
-		if strings.Contains(resp.Description, "user is over quota") ||
-			strings.Contains(resp.Description, "out of storage") {
-
-			resp.IsMailboxFull = true
-			resp.SmtpSuccess = true
-			resp.RetryValidation = false
-		}
 	}
 	return resp, health
 }
