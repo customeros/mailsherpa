@@ -51,12 +51,12 @@ func VerifyEmail(email string) {
 	request := run.BuildRequest(email)
 	syntaxResults := VerifySyntax(email, false)
 	domainResults := VerifyDomain(syntaxResults.Domain, false)
-	emailResults, err := mailvalidate.ValidateEmail(request)
+	emailResults, mailServerHealth, err := mailvalidate.ValidateEmail(request)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	response := run.BuildResponse(email, syntaxResults, domainResults, emailResults)
+	response := run.BuildResponse(email, syntaxResults, domainResults, emailResults, mailServerHealth)
 	printOutput(response)
 }
 

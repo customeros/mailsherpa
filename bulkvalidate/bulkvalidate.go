@@ -186,7 +186,7 @@ func processBatch(batch []string, catchAllResults map[string]bool) []run.VerifyE
 		if err != nil {
 			log.Printf("Error validating domain for %s: %s", email, err.Error())
 		}
-		emailResults, err := mailvalidate.ValidateEmail(request)
+		emailResults, mailServerHealth, err := mailvalidate.ValidateEmail(request)
 		if err != nil {
 			log.Printf("Error validating email for %s: %s", email, err.Error())
 		}
@@ -194,7 +194,7 @@ func processBatch(batch []string, catchAllResults map[string]bool) []run.VerifyE
 		if validateCatchAll {
 			catchAllResults[domain] = isCatchAll
 		}
-		result := run.BuildResponse(email, syntaxResults, domainResults, emailResults)
+		result := run.BuildResponse(email, syntaxResults, domainResults, emailResults, mailServerHealth)
 		results = append(results, result)
 	}
 
