@@ -34,6 +34,12 @@ func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS)
 
 	if len(dnsRecords.MX) == 0 {
 		results.Description = "No MX records for domain"
+		if dnsRecords.SPF != "" {
+			results.Description += fmt.Sprintf(". SPF record: %s", dnsRecords.SPF)
+		}
+		if len(dnsRecords.Errors) > 0 {
+			results.Description += fmt.Sprintf(". Errors: %s", strings.Join(dnsRecords.Errors, ", "))
+		}
 		return false, results, nil
 	}
 
