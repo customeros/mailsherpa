@@ -9,15 +9,16 @@ import (
 )
 
 type VerifyEmailResponse struct {
-	Email         string
-	IsDeliverable bool
-	IsValidSyntax bool
-	Provider      string
-	Firewall      string
-	IsRisky       bool
-	Risk          VerifyEmailRisk
-	Syntax        mailvalidate.SyntaxValidation
-	Smtp          Smtp
+	Email            string
+	IsDeliverable    bool
+	IsValidSyntax    bool
+	Provider         string
+	Firewall         string
+	IsRisky          bool
+	Risk             VerifyEmailRisk
+	Syntax           mailvalidate.SyntaxValidation
+	Smtp             Smtp
+	MailServerHealth mailvalidate.MailServerHealth
 }
 
 type VerifyEmailRisk struct {
@@ -55,7 +56,13 @@ func BuildRequest(email string) mailvalidate.EmailValidationRequest {
 	return request
 }
 
-func BuildResponse(emailAddress string, syntax mailvalidate.SyntaxValidation, domain mailvalidate.DomainValidation, email mailvalidate.EmailValidation) VerifyEmailResponse {
+func BuildResponse(
+	emailAddress string,
+	syntax mailvalidate.SyntaxValidation,
+	domain mailvalidate.DomainValidation,
+	email mailvalidate.EmailValidation,
+	health mailvalidate.MailServerHealth,
+) VerifyEmailResponse {
 	isRisky := false
 	if email.IsFreeAccount || email.IsRoleAccount || email.IsMailboxFull || domain.IsCatchAll || domain.IsFirewalled {
 		isRisky = true
@@ -87,14 +94,15 @@ func BuildResponse(emailAddress string, syntax mailvalidate.SyntaxValidation, do
 	}
 
 	response := VerifyEmailResponse{
-		Email:         cleanEmail,
-		IsDeliverable: email.IsDeliverable,
-		Provider:      domain.Provider,
-		Firewall:      domain.Firewall,
-		IsRisky:       isRisky,
-		Risk:          risk,
-		Syntax:        syntax,
-		Smtp:          smtp,
+		Email:            cleanEmail,
+		IsDeliverable:    email.IsDeliverable,
+		Provider:         domain.Provider,
+		Firewall:         domain.Firewall,
+		IsRisky:          isRisky,
+		Risk:             risk,
+		Syntax:           syntax,
+		Smtp:             smtp,
+		MailServerHealth: health,
 	}
 
 	return response

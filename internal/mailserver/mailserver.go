@@ -3,11 +3,12 @@ package mailserver
 import (
 	"bufio"
 	"fmt"
-	"github.com/pkg/errors"
 	"net"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/customeros/mailsherpa/internal/dns"
 )
@@ -28,9 +29,8 @@ type ProxySetup struct {
 	Password string
 }
 
-func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS) (bool, SMPTValidation, error) {
+func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS) (SMPTValidation, error) {
 	results := SMPTValidation{}
-	var isVerified bool
 
 	if len(dnsRecords.MX) == 0 {
 		results.Description = "No MX records for domain"
@@ -40,7 +40,7 @@ func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS)
 		if len(dnsRecords.Errors) > 0 {
 			results.Description += fmt.Sprintf(". Errors: %s", strings.Join(dnsRecords.Errors, ", "))
 		}
-		return false, results, nil
+		return results, nil
 	}
 
 	var conn net.Conn
@@ -61,25 +61,25 @@ func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS)
 	}
 
 	if !connected {
-		return false, results, errors.Wrap(err, "Failed to connect to any SMTP server")
+		return results, errors.Wrap(err, "Failed to connect to any SMTP server")
 	}
 
 	defer conn.Close()
 
 	if err = sendHELO(conn, client, fromDomain); err != nil {
-		return false, results, errors.Wrap(err, "Failed to send HELO command")
+		return results, errors.Wrap(err, "Failed to send HELO command")
 	}
 
 	if err = sendMAILFROM(conn, client, fromEmail); err != nil {
-		return false, results, errors.Wrap(err, "Failed to send MAIL FROM command")
+		return results, errors.Wrap(err, "Failed to send MAIL FROM command")
 	}
 
-	isVerified, results, err = sendRCPTTO(conn, client, email)
+	results, err = sendRCPTTO(conn, client, email)
 	if err != nil {
-		return false, SMPTValidation{}, errors.Wrap(err, "Failed to send RCPT TO command")
+		return results, errors.Wrap(err, "Failed to send RCPT TO command")
 	}
 
-	return isVerified, results, nil
+	return results, nil
 }
 
 func connectToSMTP(mxServer string) (net.Conn, *bufio.Reader, error) {
@@ -145,37 +145,20 @@ func sendMAILFROM(conn net.Conn, smtpClient *bufio.Reader, fromEmail string) err
 	return nil
 }
 
-func sendRCPTTO(conn net.Conn, smtpClient *bufio.Reader, emailToValidate string) (isValid bool, results SMPTValidation, err error) {
+func sendRCPTTO(conn net.Conn, smtpClient *bufio.Reader, emailToValidate string) (results SMPTValidation, err error) {
 	rcpt := fmt.Sprintf("RCPT TO:<%s>", emailToValidate)
 	resp, err := sendSMTPcommand(conn, smtpClient, rcpt)
 	if err != nil {
-		return false, results, errors.Wrap(err, "RCPT TO command failed")
+		return results, errors.Wrap(err, "RCPT TO command failed")
 	}
 
 	results.SmtpResponse = resp
 	results.ResponseCode, results.ErrorCode, results.Description = ParseSmtpResponse(resp)
 
-	switch results.ResponseCode {
-	case "250":
+	if results.ResponseCode != "" {
 		results.CanConnectSmtp = true
-		isValid = true
-	case "251":
-		results.CanConnectSmtp = true
-		isValid = true
-	case "452":
-		results.CanConnectSmtp = true
-		if results.ErrorCode == "4.2.2" {
-			results.InboxFull = true
-			isValid = false
-		}
-	case "552":
-		results.InboxFull = true
-		results.CanConnectSmtp = true
-		isValid = false
-	default:
-		results.CanConnectSmtp = true
-		isValid = false
 	}
+
 	return
 }
 
