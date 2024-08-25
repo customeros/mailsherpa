@@ -3,6 +3,7 @@ package mailserver
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"net"
 	"regexp"
 	"strings"
@@ -22,10 +23,11 @@ type SMPTValidation struct {
 	SmtpResponse   string
 }
 
-func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS) (SMPTValidation, error) {
+func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS) SMPTValidation {
 	results := SMPTValidation{}
 
 	if len(dnsRecords.MX) == 0 {
+		results.CanConnectSmtp = false
 		results.Description = "No MX records for domain"
 		if dnsRecords.SPF != "" {
 			results.Description += fmt.Sprintf(". SPF record: %s", dnsRecords.SPF)
@@ -33,46 +35,71 @@ func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS)
 		if len(dnsRecords.Errors) > 0 {
 			results.Description += fmt.Sprintf(". Errors: %s", strings.Join(dnsRecords.Errors, ", "))
 		}
-		return results, nil
+		return results
 	}
 
 	var conn net.Conn
 	var client *bufio.Reader
 	var err error
 	var connected bool
+	var greetCode string
+	var greetDesc string
 
 	for i := 0; i < len(dnsRecords.MX); i++ {
 		conn, client, err = connectToSMTP(dnsRecords.MX[i])
 		if err != nil {
 			continue
 		}
-		err = readSMTPgreeting(client)
-		if err == nil {
+		greetCode, greetDesc = readSMTPgreeting(client)
+		if greetCode == "220" {
 			connected = true
 			break
 		}
 	}
 
 	if !connected {
-		return results, errors.Wrap(err, "Failed to connect to any SMTP server")
+		results.CanConnectSmtp = false
+		results.ResponseCode = greetCode
+		results.Description = greetDesc
+		return results
 	}
 
 	defer conn.Close()
 
-	if err = sendHELO(conn, client, fromDomain); err != nil {
-		return results, errors.Wrap(err, "Failed to send HELO command")
+	heloCode, heloDesc, heloErr := sendHELO(conn, client, fromDomain)
+	if heloErr != nil {
+		results.CanConnectSmtp = false
+		log.Printf(heloErr.Error())
+		return results
+	}
+	if heloCode != "250" {
+		results.ResponseCode = heloCode
+		results.Description = heloDesc
+		results.CanConnectSmtp = false
+		return results
 	}
 
-	if err = sendMAILFROM(conn, client, fromEmail); err != nil {
-		return results, errors.Wrap(err, "Failed to send MAIL FROM command")
+	fromCode, fromDesc, fromErr := sendMAILFROM(conn, client, fromEmail)
+	if fromErr != nil {
+		results.CanConnectSmtp = false
+		log.Printf(fromErr.Error())
+		return results
+	}
+	if fromCode != "250" {
+		results.ResponseCode = fromCode
+		results.Description = fromDesc
+		results.CanConnectSmtp = false
+		return results
 	}
 
 	results, err = sendRCPTTO(conn, client, email)
 	if err != nil {
-		return results, errors.Wrap(err, "Failed to send RCPT TO command")
+		results.CanConnectSmtp = false
+		results.SmtpResponse = err.Error()
+		return results
 	}
 
-	return results, nil
+	return results
 }
 
 func connectToSMTP(mxServer string) (net.Conn, *bufio.Reader, error) {
@@ -85,23 +112,24 @@ func connectToSMTP(mxServer string) (net.Conn, *bufio.Reader, error) {
 	return conn, client, nil
 }
 
-func readSMTPgreeting(smtpClient *bufio.Reader) error {
+func readSMTPgreeting(smtpClient *bufio.Reader) (string, string) {
 	for {
 		line, err := smtpClient.ReadString('\n')
 		if err != nil {
-			return errors.Wrap(err, "Failed to read SMTP server greeting")
+			return "", ""
 		}
 
 		// Trim the line to remove whitespace and newline characters
 		line = strings.TrimSpace(line)
 
 		// Check if this is the last line of the greeting
-		if strings.HasPrefix(line, "220 ") {
+		if strings.HasPrefix(line, "220") {
 			// This is the final greeting line
-			return nil
+			return "220", ""
 		} else if !strings.HasPrefix(line, "220-") {
 			// If the line doesn't start with 220- or 220, it's an unexpected response
-			return fmt.Errorf("Unexpected SMTP server greeting: %s", line)
+			code, desc := parseSmtpCommand(line)
+			return code, desc
 		}
 
 		// If it's a continuation line (starts with 220-), continue reading
@@ -120,22 +148,24 @@ func sendSMTPcommand(conn net.Conn, smtpClient *bufio.Reader, cmd string) (strin
 	return resp, nil
 }
 
-func sendHELO(conn net.Conn, smtpClient *bufio.Reader, fromDomain string) error {
+func sendHELO(conn net.Conn, smtpClient *bufio.Reader, fromDomain string) (string, string, error) {
 	helo := fmt.Sprintf("HELO %s", fromDomain)
 	resp, err := sendSMTPcommand(conn, smtpClient, helo)
-	if err != nil || !strings.HasPrefix(resp, "250") {
-		return errors.New("HELO failed")
+	if err != nil {
+		return "", "", fmt.Errorf("SMTP HELO command failed: %w", err)
 	}
-	return nil
+	statusCode, desc := parseSmtpCommand(resp)
+	return statusCode, desc, nil
 }
 
-func sendMAILFROM(conn net.Conn, smtpClient *bufio.Reader, fromEmail string) error {
+func sendMAILFROM(conn net.Conn, smtpClient *bufio.Reader, fromEmail string) (string, string, error) {
 	mailfrom := fmt.Sprintf("MAIL FROM:<%s>", fromEmail)
 	resp, err := sendSMTPcommand(conn, smtpClient, mailfrom)
-	if err != nil || !strings.HasPrefix(resp, "250") {
-		return errors.New("MAIL FROM failed")
+	if err != nil {
+		return "", "", fmt.Errorf("SMTP MAIL FROM command failed: %w", err)
 	}
-	return nil
+	statusCode, desc := parseSmtpCommand(resp)
+	return statusCode, desc, nil
 }
 
 func sendRCPTTO(conn net.Conn, smtpClient *bufio.Reader, emailToValidate string) (results SMPTValidation, err error) {
@@ -197,4 +227,19 @@ func ParseSmtpResponse(response string) (statusCode, errorCode, description stri
 	description = strings.TrimLeft(description, "]) #-}")
 
 	return
+}
+
+func parseSmtpCommand(response string) (string, string) {
+	// Check if the string is long enough to contain a status code
+	if len(response) < 3 {
+		return response, ""
+	}
+
+	// Extract the status code
+	statusCode := response[:3]
+
+	// Extract the rest of the message
+	message := strings.TrimSpace(response[3:])
+
+	return statusCode, message
 }

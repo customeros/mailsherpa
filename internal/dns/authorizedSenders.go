@@ -70,16 +70,27 @@ func extractRootDomain(fullDomain string) string {
 		return fullDomain
 	}
 
-	commonTLDs := map[string]bool{
+	// List of known ccTLDs with second-level domains
+	ccTLDsWithSLD := map[string]bool{
+		"uk": true, "au": true, "nz": true, "jp": true,
+	}
+
+	// Common second-level domains
+	commonSLDs := map[string]bool{
 		"com": true, "org": true, "net": true, "edu": true, "gov": true, "co": true,
 	}
 
 	tldIndex := len(parts) - 1
-	secondLevelDomainIndex := tldIndex - 1
+	sldIndex := tldIndex - 1
 
-	if commonTLDs[parts[secondLevelDomainIndex]] {
-		return strings.Join(parts[secondLevelDomainIndex:], ".")
+	// Check for ccTLDs with second-level domains
+	if ccTLDsWithSLD[parts[tldIndex]] && commonSLDs[parts[sldIndex]] {
+		if len(parts) > 3 {
+			return strings.Join(parts[len(parts)-3:], ".")
+		}
+		return fullDomain
 	}
 
-	return strings.Join(parts[secondLevelDomainIndex:], ".")
+	// For other cases, return the last two parts
+	return strings.Join(parts[sldIndex:], ".")
 }
