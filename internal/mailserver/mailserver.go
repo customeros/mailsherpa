@@ -114,6 +114,9 @@ func connectToSMTP(mxServer string) (net.Conn, *bufio.Reader, error) {
 }
 
 func readSMTPgreeting(smtpClient *bufio.Reader) (string, string) {
+	var fullGreeting strings.Builder
+	var code string
+
 	for {
 		line, err := smtpClient.ReadString('\n')
 		if err != nil {
@@ -123,17 +126,23 @@ func readSMTPgreeting(smtpClient *bufio.Reader) (string, string) {
 		// Trim the line to remove whitespace and newline characters
 		line = strings.TrimSpace(line)
 
-		// Check if this is the last line of the greeting
-		if strings.HasPrefix(line, "220") || strings.HasPrefix(line, "220-") {
-			return "220", ""
-		} else {
-			// If the line doesn't start with 220- or 220, it's an unexpected response
-			code, desc := parseSmtpCommand(line)
-			return code, desc
-		}
+		// Append this line to the full greeting
+		fullGreeting.WriteString(line + "\n")
 
-		// If it's a continuation line (starts with 220-), continue reading
+		// Check if it's a continuation line
+		if strings.HasPrefix(line, "220-") {
+			continue
+		} else if strings.HasPrefix(line, "220 ") {
+			// This is the last line of the greeting
+			code = "220"
+			break
+		} else {
+			// Unexpected response
+			parsedCode, _ := parseSmtpCommand(line)
+			return parsedCode, fullGreeting.String()
+		}
 	}
+	return code, fullGreeting.String()
 }
 
 func sendSMTPcommand(conn net.Conn, smtpClient *bufio.Reader, cmd string) (string, error) {
