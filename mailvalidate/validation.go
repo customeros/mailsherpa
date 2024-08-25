@@ -344,7 +344,8 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 			strings.Contains(resp.SmtpResponse.Description, "envelope blocked") ||
 			strings.Contains(resp.SmtpResponse.Description, "ERS-DUL") ||
 			strings.Contains(resp.SmtpResponse.Description, "Listed by PBL") ||
-			strings.Contains(resp.SmtpResponse.Description, "rejected by Abusix blacklist") {
+			strings.Contains(resp.SmtpResponse.Description, "rejected by Abusix blacklist") ||
+			strings.Contains(resp.SmtpResponse.Description, "spf check failed") {
 
 			resp.MailServerHealth.IsBlacklisted = true
 			ip, err := ipify.GetIp()
