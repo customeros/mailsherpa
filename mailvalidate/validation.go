@@ -261,6 +261,7 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 			strings.Contains(resp.SmtpResponse.Description, "Greylisting") ||
 			strings.Contains(resp.SmtpResponse.Description, "Internal resource temporarily unavailable") ||
 			strings.Contains(resp.SmtpResponse.Description, "Internal resources are temporarily unavailable") ||
+			strings.Contains(resp.SmtpResponse.Description, "ip and spf record not match") ||
 			strings.Contains(resp.SmtpResponse.Description, "IP Temporarily Blacklisted") ||
 			strings.Contains(resp.SmtpResponse.Description, "Not allowed") ||
 			strings.Contains(resp.SmtpResponse.Description, "not yet authorized to deliver mail from") ||
