@@ -61,6 +61,9 @@ func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS)
 		results.CanConnectSmtp = false
 		results.ResponseCode = greetCode
 		results.Description = greetDesc
+		if results.Description == "" {
+			results.Description = "Cannot connect to any MX server"
+		}
 		return results
 	}
 
