@@ -27,9 +27,9 @@ func BulkVerify(inputFilePath, outputFilePath string) error {
 
 func VerifyDomain(domain string, printResults bool) mailvalidate.DomainValidation {
 	request := run.BuildRequest(fmt.Sprintf("user@%s", domain))
-	domainResults, err := mailvalidate.ValidateDomain(request, true)
-	if err != nil {
-		fmt.Println(err)
+	domainResults := mailvalidate.ValidateDomain(request)
+	if domainResults.Error != "" {
+		fmt.Println(domainResults.Error)
 	}
 
 	if printResults {
@@ -51,12 +51,12 @@ func VerifyEmail(email string) {
 	request := run.BuildRequest(email)
 	syntaxResults := VerifySyntax(email, false)
 	domainResults := VerifyDomain(syntaxResults.Domain, false)
-	emailResults, mailServerHealth, err := mailvalidate.ValidateEmail(request)
-	if err != nil {
-		fmt.Println(err)
+	emailResults := mailvalidate.ValidateEmail(request)
+	if emailResults.Error != "" {
+		fmt.Println(emailResults.Error)
 	}
 
-	response := run.BuildResponse(email, syntaxResults, domainResults, emailResults, mailServerHealth)
+	response := run.BuildResponse(email, syntaxResults, domainResults, emailResults)
 	printOutput(response)
 }
 

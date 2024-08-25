@@ -22,13 +22,6 @@ type SMPTValidation struct {
 	SmtpResponse   string
 }
 
-type ProxySetup struct {
-	Enable   bool
-	Address  string
-	Username string
-	Password string
-}
-
 func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS) (SMPTValidation, error) {
 	results := SMPTValidation{}
 

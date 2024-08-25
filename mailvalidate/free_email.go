@@ -3,9 +3,9 @@ package mailvalidate
 import (
 	"embed"
 	"fmt"
-	"golang.org/x/exp/slices"
 
 	"github.com/BurntSushi/toml"
+	"golang.org/x/exp/slices"
 
 	"github.com/customeros/mailsherpa/internal/syntax"
 )
@@ -17,7 +17,7 @@ type FreeEmails struct {
 	FreeEmailList []string `toml:"free_emails"`
 }
 
-func IsFreeEmailCheck(email string, freeEmails FreeEmails) (bool, error) {
+func IsFreeEmailCheck(email string, freeEmails *FreeEmails) (bool, error) {
 	_, domain, ok := syntax.GetEmailUserAndDomain(email)
 	if !ok {
 		return false, fmt.Errorf("Not a valid email address")

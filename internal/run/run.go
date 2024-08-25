@@ -10,14 +10,16 @@ import (
 
 type VerifyEmailResponse struct {
 	Email            string
-	IsDeliverable    bool
+	IsDeliverable    string
 	IsValidSyntax    bool
+	IsCatchAll       bool
 	Provider         string
 	Firewall         string
 	IsRisky          bool
 	Risk             VerifyEmailRisk
 	Syntax           mailvalidate.SyntaxValidation
-	Smtp             Smtp
+	RetryValidation  bool
+	Smtp             mailvalidate.SmtpResponse
 	MailServerHealth mailvalidate.MailServerHealth
 }
 
@@ -26,15 +28,6 @@ type VerifyEmailRisk struct {
 	IsFreeAccount bool
 	IsRoleAccount bool
 	IsMailboxFull bool
-	IsCatchAll    bool
-}
-
-type Smtp struct {
-	Success      bool
-	Retry        bool
-	ResponseCode string
-	ErrorCode    string
-	Description  string
 }
 
 func BuildRequest(email string) mailvalidate.EmailValidationRequest {
@@ -61,15 +54,18 @@ func BuildResponse(
 	syntax mailvalidate.SyntaxValidation,
 	domain mailvalidate.DomainValidation,
 	email mailvalidate.EmailValidation,
-	health mailvalidate.MailServerHealth,
 ) VerifyEmailResponse {
 	isRisky := false
-	if email.IsFreeAccount || email.IsRoleAccount || email.IsMailboxFull || domain.IsCatchAll || domain.IsFirewalled {
+	if email.IsFreeAccount ||
+		email.IsRoleAccount ||
+		email.IsMailboxFull ||
+		domain.IsFirewalled {
+
 		isRisky = true
 	}
 
-	if !domain.HasMXRecord {
-		email.SmtpSuccess = true
+	if domain.IsCatchAll {
+		email.IsDeliverable = "unknown"
 	}
 
 	risk := VerifyEmailRisk{
@@ -77,15 +73,6 @@ func BuildResponse(
 		IsFreeAccount: email.IsFreeAccount,
 		IsRoleAccount: email.IsRoleAccount,
 		IsMailboxFull: email.IsMailboxFull,
-		IsCatchAll:    domain.IsCatchAll,
-	}
-
-	smtp := Smtp{
-		Success:      email.SmtpSuccess,
-		Retry:        email.RetryValidation,
-		ResponseCode: email.ResponseCode,
-		ErrorCode:    email.ErrorCode,
-		Description:  email.Description,
 	}
 
 	cleanEmail := emailAddress
@@ -96,13 +83,16 @@ func BuildResponse(
 	response := VerifyEmailResponse{
 		Email:            cleanEmail,
 		IsDeliverable:    email.IsDeliverable,
+		IsValidSyntax:    syntax.IsValid,
+		IsCatchAll:       domain.IsCatchAll,
 		Provider:         domain.Provider,
 		Firewall:         domain.Firewall,
 		IsRisky:          isRisky,
 		Risk:             risk,
+		RetryValidation:  email.RetryValidation,
 		Syntax:           syntax,
-		Smtp:             smtp,
-		MailServerHealth: health,
+		Smtp:             email.SmtpResponse,
+		MailServerHealth: email.MailServerHealth,
 	}
 
 	return response

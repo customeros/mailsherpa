@@ -128,16 +128,14 @@ func writeResultsFile(results []run.VerifyEmailResponse, filePath string, append
 		row := []string{
 			resp.Email, resp.Syntax.User, resp.Syntax.Domain,
 			strconv.FormatBool(resp.Syntax.IsValid),
-			strconv.FormatBool(resp.IsDeliverable),
+			resp.IsDeliverable,
 			resp.Provider, resp.Firewall,
 			strconv.FormatBool(resp.IsRisky),
 			strconv.FormatBool(resp.Risk.IsFirewalled),
 			strconv.FormatBool(resp.Risk.IsFreeAccount),
 			strconv.FormatBool(resp.Risk.IsRoleAccount),
 			strconv.FormatBool(resp.Risk.IsMailboxFull),
-			strconv.FormatBool(resp.Risk.IsCatchAll),
-			strconv.FormatBool(resp.Smtp.Success),
-			strconv.FormatBool(resp.Smtp.Retry),
+			strconv.FormatBool(resp.IsCatchAll),
 			resp.Smtp.ResponseCode, resp.Smtp.ErrorCode, resp.Smtp.Description,
 		}
 		if err := writer.Write(row); err != nil {
@@ -182,19 +180,19 @@ func processBatch(batch []string, catchAllResults map[string]bool) []run.VerifyE
 			validateCatchAll = true
 		}
 		syntaxResults := mailvalidate.ValidateEmailSyntax(email)
-		domainResults, err := mailvalidate.ValidateDomain(request, validateCatchAll)
-		if err != nil {
-			log.Printf("Error validating domain for %s: %s", email, err.Error())
+		domainResults := mailvalidate.ValidateDomain(request)
+		if domainResults.Error != "" {
+			log.Println(domainResults.Error)
 		}
-		emailResults, mailServerHealth, err := mailvalidate.ValidateEmail(request)
-		if err != nil {
-			log.Printf("Error validating email for %s: %s", email, err.Error())
+		emailResults := mailvalidate.ValidateEmail(request)
+		if emailResults.Error != "" {
+			log.Println(domainResults.Error)
 		}
 		isCatchAll := domainResults.IsCatchAll
 		if validateCatchAll {
 			catchAllResults[domain] = isCatchAll
 		}
-		result := run.BuildResponse(email, syntaxResults, domainResults, emailResults, mailServerHealth)
+		result := run.BuildResponse(email, syntaxResults, domainResults, emailResults)
 		results = append(results, result)
 	}
 
