@@ -122,6 +122,7 @@ func ValidateDomainWithCustomKnownProviders(validationRequest EmailValidationReq
 
 func ValidateEmail(validationRequest EmailValidationRequest) EmailValidation {
 	var results EmailValidation
+	results.IsDeliverable = "unknown"
 
 	if validationRequest.Dns == nil {
 		dnsFromEmail := dns.GetDNS(validationRequest.Email)
@@ -135,6 +136,7 @@ func ValidateEmail(validationRequest EmailValidationRequest) EmailValidation {
 	emailSyntaxResult := ValidateEmailSyntax(validationRequest.Email)
 	if !emailSyntaxResult.IsValid {
 		results.Error = "Invalid email address"
+		results.IsDeliverable = "false"
 		return results
 	}
 
@@ -166,16 +168,12 @@ func ValidateEmail(validationRequest EmailValidationRequest) EmailValidation {
 	}
 	results.IsRoleAccount = isRoleAccount
 
-	smtpValidation, err := mailserver.VerifyEmailAddress(
+	smtpValidation := mailserver.VerifyEmailAddress(
 		email,
 		validationRequest.FromDomain,
 		validationRequest.FromEmail,
 		*validationRequest.Dns,
 	)
-	if err != nil {
-		results.Error = fmt.Sprintf("SMTP error: %v", err)
-		return results
-	}
 
 	results.IsMailboxFull = smtpValidation.InboxFull
 
@@ -224,7 +222,11 @@ func evaluateDnsRecords(validationRequest *EmailValidationRequest, knownProvider
 
 func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 	resp.RetryValidation = true
-	resp.IsDeliverable = "unknown"
+
+	if strings.Contains(resp.SmtpResponse.Description, "No MX records") {
+		resp.IsDeliverable = "false"
+		resp.RetryValidation = false
+	}
 
 	switch resp.SmtpResponse.ResponseCode {
 	case "250", "251":
@@ -308,6 +310,7 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 			strings.Contains(resp.SmtpResponse.Description, "relay not permitted") ||
 			strings.Contains(resp.SmtpResponse.Description, "Relaying denied") ||
 			strings.Contains(resp.SmtpResponse.Description, "relaying denied") ||
+			strings.Contains(resp.SmtpResponse.Description, "Service not available") ||
 			strings.Contains(resp.SmtpResponse.Description, "that domain isn't in my list of allowed rcpthosts") ||
 			strings.Contains(resp.SmtpResponse.Description, "Unknown user") ||
 			strings.Contains(resp.SmtpResponse.Description, "unmonitored inbox") ||
@@ -349,11 +352,23 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 			resp.MailServerHealth.ServerIP = ip
 			resp.MailServerHealth.FromEmail = req.FromEmail
 		}
+
+		if strings.Contains(resp.SmtpResponse.Description, "temporarily blocked") {
+			resp.MailServerHealth.IsGreylisted = true
+			ip, err := ipify.GetIp()
+			if err != nil {
+				log.Println("Unable to obtain Mailserver IP")
+			}
+			resp.MailServerHealth.ServerIP = ip
+			resp.MailServerHealth.FromEmail = req.FromEmail
+			resp.MailServerHealth.RetryAfter = 0 // TODO
+		}
 	}
 }
 
 func catchAllTest(validationRequest *EmailValidationRequest) EmailValidation {
 	var results EmailValidation
+	results.IsDeliverable = "unknown"
 
 	_, domain, ok := syntax.GetEmailUserAndDomain(validationRequest.Email)
 	if !ok {
@@ -363,16 +378,12 @@ func catchAllTest(validationRequest *EmailValidationRequest) EmailValidation {
 
 	catchAllEmail := fmt.Sprintf("%s@%s", validationRequest.CatchAllTestUser, domain)
 
-	smtpValidation, err := mailserver.VerifyEmailAddress(
+	smtpValidation := mailserver.VerifyEmailAddress(
 		catchAllEmail,
 		validationRequest.FromDomain,
 		validationRequest.FromEmail,
 		*validationRequest.Dns,
 	)
-	if err != nil {
-		results.Error = fmt.Sprintf("SMTP error: %v", err)
-		return results
-	}
 	results.IsMailboxFull = smtpValidation.InboxFull
 	results.SmtpResponse.ResponseCode = smtpValidation.ResponseCode
 	results.SmtpResponse.ErrorCode = smtpValidation.ErrorCode
