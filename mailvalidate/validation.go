@@ -63,6 +63,7 @@ type MailServerHealth struct {
 
 type SmtpResponse struct {
 	CanConnectSMTP bool
+	TLSRequired    bool
 	ResponseCode   string
 	ErrorCode      string
 	Description    string
@@ -289,6 +290,11 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 			resp.MailServerHealth.RetryAfter = getRetryTimestamp(greylistMinutesBeforeRetry)
 		}
 
+		if strings.Contains(resp.SmtpResponse.Description, "TLS") {
+			resp.SmtpResponse.TLSRequired = true
+			resp.RetryValidation = true
+		}
+
 	case "501", "503", "550", "551", "552", "554", "557":
 
 		if strings.Contains(resp.SmtpResponse.Description, "user is over quota") ||
@@ -376,6 +382,11 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 			resp.MailServerHealth.ServerIP = ip
 			resp.MailServerHealth.FromEmail = req.FromEmail
 			resp.MailServerHealth.RetryAfter = getRetryTimestamp(greylistMinutesBeforeRetry)
+		}
+
+		if strings.Contains(resp.SmtpResponse.Description, "TLS") {
+			resp.SmtpResponse.TLSRequired = true
+			resp.RetryValidation = true
 		}
 	}
 }

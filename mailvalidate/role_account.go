@@ -3,6 +3,7 @@ package mailvalidate
 import (
 	"embed"
 	"fmt"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"golang.org/x/exp/slices"
@@ -14,7 +15,8 @@ import (
 var roleEmailsFile embed.FS
 
 type RoleAccounts struct {
-	RoleAccountList []string `toml:"role_emails"`
+	Contains []string `toml:"contains"`
+	Matches  []string `toml:"matches"`
 }
 
 func IsRoleAccountCheck(email string, roleAccounts *RoleAccounts) (bool, error) {
@@ -23,9 +25,16 @@ func IsRoleAccountCheck(email string, roleAccounts *RoleAccounts) (bool, error) 
 		return false, fmt.Errorf("Not a valid email address")
 	}
 
-	if slices.Contains(roleAccounts.RoleAccountList, user) {
+	if slices.Contains(roleAccounts.Matches, user) {
 		return true, nil
 	}
+
+	for _, value := range roleAccounts.Contains {
+		if strings.Contains(value, user) || strings.Contains(user, value) {
+			return true, nil
+		}
+	}
+
 	return false, nil
 }
 
