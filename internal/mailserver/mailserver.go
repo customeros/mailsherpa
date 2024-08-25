@@ -41,7 +41,6 @@ func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS)
 	var conn net.Conn
 	var client *bufio.Reader
 	var err error
-	var connected bool
 	var greetCode string
 	var greetDesc string
 
@@ -52,12 +51,11 @@ func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS)
 		}
 		greetCode, greetDesc = readSMTPgreeting(client)
 		if greetCode == "220" {
-			connected = true
 			break
 		}
 	}
 
-	if !connected {
+	if greetCode != "220" {
 		results.CanConnectSmtp = false
 		results.ResponseCode = greetCode
 		results.Description = greetDesc
@@ -126,10 +124,9 @@ func readSMTPgreeting(smtpClient *bufio.Reader) (string, string) {
 		line = strings.TrimSpace(line)
 
 		// Check if this is the last line of the greeting
-		if strings.HasPrefix(line, "220") {
-			// This is the final greeting line
+		if strings.HasPrefix(line, "220") || strings.HasPrefix(line, "220-") {
 			return "220", ""
-		} else if !strings.HasPrefix(line, "220-") {
+		} else {
 			// If the line doesn't start with 220- or 220, it's an unexpected response
 			code, desc := parseSmtpCommand(line)
 			return code, desc
@@ -243,6 +240,7 @@ func parseSmtpCommand(response string) (string, string) {
 
 	// Extract the rest of the message
 	message := strings.TrimSpace(response[3:])
+	message = strings.TrimPrefix(message, "-")
 
 	return statusCode, message
 }
