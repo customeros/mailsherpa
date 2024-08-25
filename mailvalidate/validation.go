@@ -223,7 +223,9 @@ func evaluateDnsRecords(validationRequest *EmailValidationRequest, knownProvider
 func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 	resp.RetryValidation = true
 
-	if strings.Contains(resp.SmtpResponse.Description, "No MX records") {
+	if strings.Contains(resp.SmtpResponse.Description, "No MX records") ||
+		strings.Contains(resp.SmtpResponse.Description, "Cannot connect to any MX server") {
+
 		resp.IsDeliverable = "false"
 		resp.RetryValidation = false
 	}
