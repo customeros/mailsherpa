@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rdegges/go-ipify"
@@ -222,6 +223,7 @@ func evaluateDnsRecords(validationRequest *EmailValidationRequest, knownProvider
 
 func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 	resp.RetryValidation = true
+	greylistMinutesBeforeRetry := 75
 
 	if strings.Contains(resp.SmtpResponse.Description, "No MX records") ||
 		strings.Contains(resp.SmtpResponse.Description, "Cannot connect to any MX server") {
@@ -274,9 +276,17 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 			if err != nil {
 				log.Println("Unable to obtain Mailserver IP")
 			}
+
 			resp.MailServerHealth.ServerIP = ip
 			resp.MailServerHealth.FromEmail = req.FromEmail
-			resp.MailServerHealth.RetryAfter = 0 // TODO
+
+			if strings.Contains(resp.SmtpResponse.Description, "5 minutes") {
+				greylistMinutesBeforeRetry = 6
+			}
+			if strings.Contains(resp.SmtpResponse.Description, "60 seconds") {
+				greylistMinutesBeforeRetry = 2
+			}
+			resp.MailServerHealth.RetryAfter = getRetryTimestamp(greylistMinutesBeforeRetry)
 		}
 
 	case "501", "503", "550", "551", "552", "554", "557":
@@ -365,7 +375,7 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 			}
 			resp.MailServerHealth.ServerIP = ip
 			resp.MailServerHealth.FromEmail = req.FromEmail
-			resp.MailServerHealth.RetryAfter = 0 // TODO
+			resp.MailServerHealth.RetryAfter = getRetryTimestamp(greylistMinutesBeforeRetry)
 		}
 	}
 }
@@ -414,4 +424,10 @@ func validateRequest(request *EmailValidationRequest) error {
 		request.CatchAllTestUser = GenerateCatchAllUsername()
 	}
 	return nil
+}
+
+func getRetryTimestamp(minutesDelay int) int {
+	currentEpochTime := time.Now().Unix()
+	retryTimestamp := time.Unix(currentEpochTime, 0).Add(time.Duration(minutesDelay) * time.Minute).Unix()
+	return int(retryTimestamp)
 }
