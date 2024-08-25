@@ -20,11 +20,11 @@ var (
 func IsValidEmailSyntax(email string) (bool, string) {
 	normalizedEmail := convertToAscii(email)
 
-	if !isValidEmailFormat(email) {
+	if !isValidEmailFormat(normalizedEmail) {
 		return false, ""
 	}
 
-	username, domain, ok := splitEmail(email)
+	username, domain, ok := splitEmail(normalizedEmail)
 	if !ok {
 		return false, ""
 	}

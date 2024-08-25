@@ -3,9 +3,11 @@ package mailvalidate
 import (
 	"embed"
 	"fmt"
+
 	"github.com/BurntSushi/toml"
-	"github.com/customeros/mailsherpa/internal/syntax"
 	"golang.org/x/exp/slices"
+
+	"github.com/customeros/mailsherpa/internal/syntax"
 )
 
 //go:embed role_emails.toml
@@ -15,7 +17,7 @@ type RoleAccounts struct {
 	RoleAccountList []string `toml:"role_emails"`
 }
 
-func IsRoleAccountCheck(email string, roleAccounts RoleAccounts) (bool, error) {
+func IsRoleAccountCheck(email string, roleAccounts *RoleAccounts) (bool, error) {
 	user, _, ok := syntax.GetEmailUserAndDomain(email)
 	if !ok {
 		return false, fmt.Errorf("Not a valid email address")
