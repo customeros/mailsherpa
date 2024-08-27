@@ -118,6 +118,7 @@ func ValidateDomainWithCustomKnownProviders(validationRequest EmailValidationReq
 	}
 
 	results.MailServerHealth = catchAllResults.MailServerHealth
+	results.SmtpResponse = catchAllResults.SmtpResponse
 
 	return results
 }
