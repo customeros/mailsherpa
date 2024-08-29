@@ -30,7 +30,7 @@ func IsRoleAccountCheck(email string, roleAccounts *RoleAccounts) (bool, error) 
 	}
 
 	for _, value := range roleAccounts.Contains {
-		if strings.Contains(value, user) || strings.Contains(user, value) {
+		if strings.Contains(user, value) {
 			return true, nil
 		}
 	}
