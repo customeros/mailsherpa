@@ -22,6 +22,13 @@ type EmailValidationRequest struct {
 	FromEmail        string
 	CatchAllTestUser string
 	Dns              *dns.DNS
+	// applicable only for email validation. Pass results from domain validation
+	DomainValidationParams *DomainValidationParams
+}
+
+type DomainValidationParams struct {
+	IsPrimaryDomain bool
+	PrimaryDomain   string
 }
 
 type SyntaxValidation struct {
@@ -29,6 +36,10 @@ type SyntaxValidation struct {
 	User       string
 	Domain     string
 	CleanEmail string
+}
+
+type AlternateEmail struct {
+	Email string
 }
 
 type DomainValidation struct {
@@ -54,6 +65,7 @@ type EmailValidation struct {
 	RetryValidation  bool
 	SmtpResponse     SmtpResponse
 	MailServerHealth MailServerHealth
+	AlternateEmail   AlternateEmail
 	Error            string
 }
 
@@ -147,6 +159,7 @@ func ValidateEmail(validationRequest EmailValidationRequest) EmailValidation {
 		results.Error = fmt.Sprintf("Invalid request: %v", err)
 		return results
 	}
+
 	emailSyntaxResult := ValidateEmailSyntax(validationRequest.Email)
 	if !emailSyntaxResult.IsValid {
 		results.Error = "Invalid email address"
@@ -197,6 +210,12 @@ func ValidateEmail(validationRequest EmailValidationRequest) EmailValidation {
 	results.SmtpResponse.CanConnectSMTP = smtpValidation.CanConnectSmtp
 
 	handleSmtpResponses(&validationRequest, &results)
+
+	if validationRequest.DomainValidationParams != nil {
+		if !validationRequest.DomainValidationParams.IsPrimaryDomain && validationRequest.DomainValidationParams.PrimaryDomain != "" {
+			results.AlternateEmail.Email = fmt.Sprintf("%s@%s", emailSyntaxResult.User, validationRequest.DomainValidationParams.PrimaryDomain)
+		}
+	}
 
 	return results
 }
