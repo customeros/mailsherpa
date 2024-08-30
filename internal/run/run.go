@@ -10,7 +10,7 @@ import (
 
 type VerifyEmailResponse struct {
 	Email                 string
-	IsDeliverable         string
+	Deliverable           string
 	IsValidSyntax         bool
 	IsCatchAll            bool
 	Provider              string
@@ -18,16 +18,22 @@ type VerifyEmailResponse struct {
 	IsRisky               bool
 	Risk                  VerifyEmailRisk
 	Syntax                mailvalidate.SyntaxValidation
+	AlternateEmail        AlternateEmail
 	RetryValidation       bool
 	Smtp                  mailvalidate.SmtpResponse
 	MailServerHealth      mailvalidate.MailServerHealth
 }
 
 type VerifyEmailRisk struct {
-	IsFirewalled  bool
-	IsFreeAccount bool
-	IsRoleAccount bool
-	IsMailboxFull bool
+	IsFirewalled    bool
+	IsFreeAccount   bool
+	IsRoleAccount   bool
+	IsMailboxFull   bool
+	IsPrimaryDomain bool
+}
+
+type AlternateEmail struct {
+	Email string
 }
 
 func BuildRequest(email string) mailvalidate.EmailValidationRequest {
@@ -59,7 +65,8 @@ func BuildResponse(
 	if email.IsFreeAccount ||
 		email.IsRoleAccount ||
 		email.IsMailboxFull ||
-		domain.IsFirewalled {
+		domain.IsFirewalled ||
+		!domain.IsPrimaryDomain {
 
 		isRisky = true
 	}
@@ -69,10 +76,11 @@ func BuildResponse(
 	}
 
 	risk := VerifyEmailRisk{
-		IsFirewalled:  domain.IsFirewalled,
-		IsFreeAccount: email.IsFreeAccount,
-		IsRoleAccount: email.IsRoleAccount,
-		IsMailboxFull: email.IsMailboxFull,
+		IsFirewalled:    domain.IsFirewalled,
+		IsFreeAccount:   email.IsFreeAccount,
+		IsRoleAccount:   email.IsRoleAccount,
+		IsMailboxFull:   email.IsMailboxFull,
+		IsPrimaryDomain: domain.IsPrimaryDomain,
 	}
 
 	cleanEmail := emailAddress
@@ -82,7 +90,7 @@ func BuildResponse(
 
 	response := VerifyEmailResponse{
 		Email:                 cleanEmail,
-		IsDeliverable:         email.IsDeliverable,
+		Deliverable:           email.IsDeliverable,
 		IsValidSyntax:         syntax.IsValid,
 		IsCatchAll:            domain.IsCatchAll,
 		Provider:              domain.Provider,
@@ -93,6 +101,11 @@ func BuildResponse(
 		Syntax:                syntax,
 		Smtp:                  email.SmtpResponse,
 		MailServerHealth:      email.MailServerHealth,
+	}
+
+	if !domain.IsPrimaryDomain {
+		altEmail := fmt.Sprintf("%s@%s", syntax.User, domain.PrimaryDomain)
+		response.AlternateEmail.Email = altEmail
 	}
 
 	return response
