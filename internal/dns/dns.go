@@ -12,6 +12,8 @@ import (
 type DNS struct {
 	MX     []string
 	SPF    string
+	CNAME  string
+	HasA   bool
 	Errors []string
 }
 
@@ -20,19 +22,33 @@ func GetDNS(email string) DNS {
 	var mxErr error
 	var spfErr error
 
-	dns.MX, mxErr = getMXRecordsForEmail(email)
-	dns.SPF, spfErr = getSPFRecord(email)
+	_, domain, ok := syntax.GetEmailUserAndDomain(email)
+	if !ok {
+		mxErr = fmt.Errorf("No MX Records:  Invalid email address")
+		dns.Errors = append(dns.Errors, mxErr.Error())
+		return dns
+	}
+
+	dns.HasA = hasAorAAAARecord(domain)
+
+	dns.MX, mxErr = getMXRecordsForDomain(domain)
+	dns.SPF, spfErr = getSPFRecord(domain)
 	if mxErr != nil {
 		dns.Errors = append(dns.Errors, mxErr.Error())
 	}
 	if spfErr != nil {
 		dns.Errors = append(dns.Errors, spfErr.Error())
 	}
+
+	exists, cname := getCNAMERecord(domain)
+	if exists {
+		dns.CNAME = cname
+	}
 	return dns
 }
 
-func getMXRecordsForEmail(email string) ([]string, error) {
-	mxRecords, err := getRawMXRecords(email)
+func getMXRecordsForDomain(domain string) ([]string, error) {
+	mxRecords, err := getRawMXRecords(domain)
 	if err != nil {
 		return nil, err
 	}
@@ -55,12 +71,7 @@ func getMXRecordsForEmail(email string) ([]string, error) {
 	return result, nil
 }
 
-func getRawMXRecords(email string) ([]*net.MX, error) {
-	_, domain, ok := syntax.GetEmailUserAndDomain(email)
-	if !ok {
-		return nil, fmt.Errorf("Invalid domain")
-	}
-
+func getRawMXRecords(domain string) ([]*net.MX, error) {
 	mxRecords, err := net.LookupMX(domain)
 	if err != nil {
 		return nil, err
@@ -69,11 +80,7 @@ func getRawMXRecords(email string) ([]*net.MX, error) {
 	return mxRecords, nil
 }
 
-func getSPFRecord(email string) (string, error) {
-	_, domain, ok := syntax.GetEmailUserAndDomain(email)
-	if !ok {
-		return "", fmt.Errorf("invalid email address")
-	}
+func getSPFRecord(domain string) (string, error) {
 	records, err := net.LookupTXT(domain)
 	if err != nil {
 		return "", fmt.Errorf("error looking up TXT records: %w", err)
@@ -95,4 +102,29 @@ func parseTXTRecord(record string) string {
 	record = strings.Join(strings.Fields(record), " ")
 
 	return record
+}
+
+func getCNAMERecord(domain string) (bool, string) {
+	cname, err := net.LookupCNAME(domain)
+	if err != nil {
+		return false, ""
+	}
+
+	// Remove the trailing dot from the CNAME if present
+	cname = strings.TrimSuffix(cname, ".")
+
+	// Check if the CNAME is different from the input domain
+	if cname != domain && cname != domain+"." {
+		return true, cname
+	}
+
+	return false, ""
+}
+
+func hasAorAAAARecord(domain string) bool {
+	ips, err := net.LookupIP(domain)
+	if err != nil {
+		return false
+	}
+	return len(ips) > 0
 }
