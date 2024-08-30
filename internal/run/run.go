@@ -18,7 +18,7 @@ type VerifyEmailResponse struct {
 	IsRisky               bool
 	Risk                  VerifyEmailRisk
 	Syntax                mailvalidate.SyntaxValidation
-	AlternateEmail        AlternateEmail
+	AlternateEmail        mailvalidate.AlternateEmail
 	RetryValidation       bool
 	Smtp                  mailvalidate.SmtpResponse
 	MailServerHealth      mailvalidate.MailServerHealth
@@ -30,10 +30,6 @@ type VerifyEmailRisk struct {
 	IsRoleAccount   bool
 	IsMailboxFull   bool
 	IsPrimaryDomain bool
-}
-
-type AlternateEmail struct {
-	Email string
 }
 
 func BuildRequest(email string) mailvalidate.EmailValidationRequest {
