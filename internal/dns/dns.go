@@ -13,6 +13,7 @@ type DNS struct {
 	MX     []string
 	SPF    string
 	CNAME  string
+	HasA   bool
 	Errors []string
 }
 
@@ -27,6 +28,8 @@ func GetDNS(email string) DNS {
 		dns.Errors = append(dns.Errors, mxErr.Error())
 		return dns
 	}
+
+	dns.HasA = hasAorAAAARecord(domain)
 
 	dns.MX, mxErr = getMXRecordsForDomain(domain)
 	dns.SPF, spfErr = getSPFRecord(domain)
@@ -116,4 +119,12 @@ func getCNAMERecord(domain string) (bool, string) {
 	}
 
 	return false, ""
+}
+
+func hasAorAAAARecord(domain string) bool {
+	ips, err := net.LookupIP(domain)
+	if err != nil {
+		return false
+	}
+	return len(ips) > 0
 }

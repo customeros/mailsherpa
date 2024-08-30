@@ -116,7 +116,7 @@ func ValidateDomainWithCustomKnownProviders(validationRequest EmailValidationReq
 	evaluateDnsRecords(&validationRequest, &knownProviders, &results)
 
 	redirects, primaryDomain := checkRedirects(validationRequest.Email)
-	if !redirects && validationRequest.Dns.CNAME == "" && results.HasMXRecord {
+	if !redirects && validationRequest.Dns.CNAME == "" && results.HasMXRecord && validationRequest.Dns.HasA {
 		results.IsPrimaryDomain = true
 	} else {
 		results.PrimaryDomain = primaryDomain
