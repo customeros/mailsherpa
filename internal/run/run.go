@@ -9,18 +9,18 @@ import (
 )
 
 type VerifyEmailResponse struct {
-	Email            string
-	IsDeliverable    string
-	IsValidSyntax    bool
-	IsCatchAll       bool
-	Provider         string
-	Firewall         string
-	IsRisky          bool
-	Risk             VerifyEmailRisk
-	Syntax           mailvalidate.SyntaxValidation
-	RetryValidation  bool
-	Smtp             mailvalidate.SmtpResponse
-	MailServerHealth mailvalidate.MailServerHealth
+	Email                 string
+	IsDeliverable         string
+	IsValidSyntax         bool
+	IsCatchAll            bool
+	Provider              string
+	SecureGatewayProvider string
+	IsRisky               bool
+	Risk                  VerifyEmailRisk
+	Syntax                mailvalidate.SyntaxValidation
+	RetryValidation       bool
+	Smtp                  mailvalidate.SmtpResponse
+	MailServerHealth      mailvalidate.MailServerHealth
 }
 
 type VerifyEmailRisk struct {
@@ -81,18 +81,18 @@ func BuildResponse(
 	}
 
 	response := VerifyEmailResponse{
-		Email:            cleanEmail,
-		IsDeliverable:    email.IsDeliverable,
-		IsValidSyntax:    syntax.IsValid,
-		IsCatchAll:       domain.IsCatchAll,
-		Provider:         domain.Provider,
-		Firewall:         domain.Firewall,
-		IsRisky:          isRisky,
-		Risk:             risk,
-		RetryValidation:  email.RetryValidation,
-		Syntax:           syntax,
-		Smtp:             email.SmtpResponse,
-		MailServerHealth: email.MailServerHealth,
+		Email:                 cleanEmail,
+		IsDeliverable:         email.IsDeliverable,
+		IsValidSyntax:         syntax.IsValid,
+		IsCatchAll:            domain.IsCatchAll,
+		Provider:              domain.Provider,
+		SecureGatewayProvider: domain.SecureGatewayProvider,
+		IsRisky:               isRisky,
+		Risk:                  risk,
+		RetryValidation:       email.RetryValidation,
+		Syntax:                syntax,
+		Smtp:                  email.SmtpResponse,
+		MailServerHealth:      email.MailServerHealth,
 	}
 
 	return response

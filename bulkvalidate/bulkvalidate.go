@@ -129,7 +129,7 @@ func writeResultsFile(results []run.VerifyEmailResponse, filePath string, append
 			resp.Email, resp.Syntax.User, resp.Syntax.Domain,
 			strconv.FormatBool(resp.Syntax.IsValid),
 			resp.IsDeliverable,
-			resp.Provider, resp.Firewall,
+			resp.Provider, resp.SecureGatewayProvider,
 			strconv.FormatBool(resp.IsRisky),
 			strconv.FormatBool(resp.Risk.IsFirewalled),
 			strconv.FormatBool(resp.Risk.IsFreeAccount),
