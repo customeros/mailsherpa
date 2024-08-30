@@ -30,16 +30,16 @@ type SyntaxValidation struct {
 }
 
 type DomainValidation struct {
-	Provider          string
-	Firewall          string
-	AuthorizedSenders dns.AuthorizedSenders
-	IsFirewalled      bool
-	IsCatchAll        bool
-	HasMXRecord       bool
-	HasSPFRecord      bool
-	SmtpResponse      SmtpResponse
-	MailServerHealth  MailServerHealth
-	Error             string
+	Provider              string
+	SecureGatewayProvider string
+	AuthorizedSenders     dns.AuthorizedSenders
+	IsFirewalled          bool
+	IsCatchAll            bool
+	HasMXRecord           bool
+	HasSPFRecord          bool
+	SmtpResponse          SmtpResponse
+	MailServerHealth      MailServerHealth
+	Error                 string
 }
 
 type EmailValidation struct {
@@ -196,7 +196,7 @@ func evaluateDnsRecords(validationRequest *EmailValidationRequest, knownProvider
 		provider, firewall := dns.GetEmailProviderFromMx(*validationRequest.Dns, *knownProviders)
 		results.Provider = provider
 		if firewall != "" {
-			results.Firewall = firewall
+			results.SecureGatewayProvider = firewall
 			results.IsFirewalled = true
 		}
 	}
@@ -219,7 +219,7 @@ func evaluateDnsRecords(validationRequest *EmailValidationRequest, knownProvider
 
 	if !results.IsFirewalled && len(results.AuthorizedSenders.Security) > 0 {
 		results.IsFirewalled = true
-		results.Firewall = results.AuthorizedSenders.Security[0]
+		results.SecureGatewayProvider = results.AuthorizedSenders.Security[0]
 	}
 }
 
