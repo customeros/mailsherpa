@@ -12,12 +12,6 @@ func main() {
 	args := flag.Args()
 
 	switch args[0] {
-	case "bulk":
-		if len(args) != 3 {
-			fmt.Println("Usage: mailsherpa bulk <input file> <output file>")
-			return
-		}
-		cmd.BulkVerify(args[1], args[2])
 	case "domain":
 		if len(args) != 2 {
 			fmt.Println("Usage: mailsherpa domain <domain>")

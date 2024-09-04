@@ -1,6 +1,8 @@
 package dns
 
-func GetEmailProviderFromMx(dns DNS, knownProviders KnownProviders) (emailProvider, firewall string) {
+import "github.com/customeros/mailsherpa/domaincheck"
+
+func GetEmailProviderFromMx(dns domaincheck.DNS, knownProviders KnownProviders) (emailProvider, firewall string) {
 	if len(dns.MX) == 0 {
 		return "", ""
 	}

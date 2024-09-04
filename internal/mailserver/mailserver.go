@@ -11,7 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/customeros/mailsherpa/internal/dns"
+	"github.com/customeros/mailsherpa/domaincheck"
 )
 
 type SMPTValidation struct {
@@ -23,7 +23,7 @@ type SMPTValidation struct {
 	SmtpResponse   string
 }
 
-func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords dns.DNS) SMPTValidation {
+func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords domaincheck.DNS) SMPTValidation {
 	results := SMPTValidation{}
 
 	if len(dnsRecords.MX) == 0 {

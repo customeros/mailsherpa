@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/customeros/mailsherpa/bulkvalidate"
 	"github.com/customeros/mailsherpa/internal/run"
 	"github.com/customeros/mailsherpa/mailvalidate"
 )
@@ -15,14 +14,9 @@ func PrintUsage() {
 	fmt.Println("Usage: mailsherpa <command> [arguments]")
 	fmt.Println("Commands:")
 	fmt.Println("  <email>")
-	fmt.Println("  bulk <input file> <output file>")
 	fmt.Println("  domain <domain>")
 	fmt.Println("  syntax <email>")
 	fmt.Println("  version")
-}
-
-func BulkVerify(inputFilePath, outputFilePath string) error {
-	return bulkvalidate.RunBulkValidation(inputFilePath, outputFilePath)
 }
 
 func VerifyDomain(domain string, printResults bool) mailvalidate.DomainValidation {
