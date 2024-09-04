@@ -3,6 +3,8 @@ package dns
 import (
 	"regexp"
 	"strings"
+
+	"github.com/customeros/mailsherpa/domaincheck"
 )
 
 type AuthorizedSenders struct {
@@ -13,7 +15,7 @@ type AuthorizedSenders struct {
 	Other      []string
 }
 
-func GetAuthorizedSenders(dns DNS, knownProviders *KnownProviders) AuthorizedSenders {
+func GetAuthorizedSenders(dns domaincheck.DNS, knownProviders *KnownProviders) AuthorizedSenders {
 	if dns.SPF == "" {
 		return AuthorizedSenders{}
 	}

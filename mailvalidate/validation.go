@@ -3,14 +3,13 @@ package mailvalidate
 import (
 	"fmt"
 	"log"
-	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rdegges/go-ipify"
 
+	"github.com/customeros/mailsherpa/domaincheck"
 	"github.com/customeros/mailsherpa/internal/dns"
 	"github.com/customeros/mailsherpa/internal/mailserver"
 	"github.com/customeros/mailsherpa/internal/syntax"
@@ -21,7 +20,7 @@ type EmailValidationRequest struct {
 	FromDomain       string
 	FromEmail        string
 	CatchAllTestUser string
-	Dns              *dns.DNS
+	Dns              *domaincheck.DNS
 	// applicable only for email validation. Pass results from domain validation
 	DomainValidationParams *DomainValidationParams
 }
@@ -127,7 +126,13 @@ func ValidateDomainWithCustomKnownProviders(validationRequest EmailValidationReq
 
 	evaluateDnsRecords(&validationRequest, &knownProviders, &results)
 
-	redirects, primaryDomain := checkRedirects(validationRequest.Email)
+	_, domain, ok := syntax.GetEmailUserAndDomain(validationRequest.Email)
+	if !ok {
+		results.Error = fmt.Sprintf("Invalid Email Address")
+		return results
+	}
+
+	redirects, primaryDomain := domaincheck.CheckRedirects(domain)
 	if !redirects && validationRequest.Dns.CNAME == "" && results.HasMXRecord && validationRequest.Dns.HasA {
 		results.IsPrimaryDomain = true
 	} else {
@@ -472,55 +477,4 @@ func getRetryTimestamp(minutesDelay int) int {
 	currentEpochTime := time.Now().Unix()
 	retryTimestamp := time.Unix(currentEpochTime, 0).Add(time.Duration(minutesDelay) * time.Minute).Unix()
 	return int(retryTimestamp)
-}
-
-func checkRedirects(email string) (bool, string) {
-
-	_, domain, _ := syntax.GetEmailUserAndDomain(email)
-
-	// Check for HTTP/HTTPS redirects
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-		Timeout: 10 * time.Second,
-	}
-
-	for _, protocol := range []string{"http", "https"} {
-		url := fmt.Sprintf("%s://%s", protocol, domain)
-		resp, err := client.Get(url)
-		if err != nil {
-			continue
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode >= 300 && resp.StatusCode < 400 {
-			location := resp.Header.Get("Location")
-			if location != "" {
-				location = extractDomain(location)
-				if location != domain {
-					return true, location
-				}
-			}
-		}
-	}
-
-	return false, ""
-}
-
-func extractDomain(urlStr string) string {
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		return urlStr // Return as-is if parsing fails
-	}
-
-	// Remove 'www.' prefix if present
-	domain := strings.TrimPrefix(u.Hostname(), "www.")
-
-	// Split the domain and get the last two parts (or just one if it's a TLD)
-	parts := strings.Split(domain, ".")
-	if len(parts) > 2 {
-		return strings.Join(parts[len(parts)-2:], ".")
-	}
-	return domain
 }
