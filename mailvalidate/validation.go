@@ -424,6 +424,11 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 			resp.SmtpResponse.TLSRequired = true
 			resp.RetryValidation = true
 		}
+
+		if strings.Contains(resp.SmtpResponse.Description, "try again") {
+			resp.RetryValidation = true
+			resp.IsDeliverable = "unknown"
+		}
 	}
 }
 
