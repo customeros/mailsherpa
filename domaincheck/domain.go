@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"net/url"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/customeros/mailsherpa/internal/syntax"
 )
 
 type DNS struct {
@@ -70,7 +71,7 @@ func CheckRedirects(domain string) (bool, string) {
 		if resp.StatusCode >= 300 && resp.StatusCode < 400 {
 			location := resp.Header.Get("Location")
 			if location != "" {
-				location = extractDomain(location)
+				location, _ = syntax.ExtractDomain(location)
 				if location != domain {
 					return true, location
 				}
@@ -79,23 +80,6 @@ func CheckRedirects(domain string) (bool, string) {
 	}
 
 	return false, ""
-}
-
-func extractDomain(urlStr string) string {
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		return urlStr // Return as-is if parsing fails
-	}
-
-	// Remove 'www.' prefix if present
-	domain := strings.TrimPrefix(u.Hostname(), "www.")
-
-	// Split the domain and get the last two parts (or just one if it's a TLD)
-	parts := strings.Split(domain, ".")
-	if len(parts) > 2 {
-		return strings.Join(parts[len(parts)-2:], ".")
-	}
-	return domain
 }
 
 func getMXRecordsForDomain(domain string) ([]string, error) {
