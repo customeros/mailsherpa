@@ -1,10 +1,11 @@
 package dns
 
 import (
+	"log"
 	"regexp"
-	"strings"
 
 	"github.com/customeros/mailsherpa/domaincheck"
+	"github.com/customeros/mailsherpa/internal/syntax"
 )
 
 type AuthorizedSenders struct {
@@ -45,7 +46,10 @@ func processIncludes(spfRecord string, knownProviders *KnownProviders) Authorize
 		if len(include) < 2 {
 			continue
 		}
-		includeDomain := extractRootDomain(include[1])
+		includeDomain, err := syntax.ExtractDomain(include[1])
+		if err != nil {
+			log.Printf("Error: %v", err)
+		}
 		providerName, category := knownProviders.GetProviderByDomain(includeDomain)
 		if providerName != "" {
 			if slice, exists := categoryMap[category]; exists {
@@ -64,35 +68,4 @@ func appendIfNotExists(slice *[]string, s string) {
 		}
 	}
 	*slice = append(*slice, s)
-}
-
-func extractRootDomain(fullDomain string) string {
-	parts := strings.Split(fullDomain, ".")
-	if len(parts) <= 2 {
-		return fullDomain
-	}
-
-	// List of known ccTLDs with second-level domains
-	ccTLDsWithSLD := map[string]bool{
-		"uk": true, "au": true, "nz": true, "jp": true,
-	}
-
-	// Common second-level domains
-	commonSLDs := map[string]bool{
-		"com": true, "org": true, "net": true, "edu": true, "gov": true, "co": true,
-	}
-
-	tldIndex := len(parts) - 1
-	sldIndex := tldIndex - 1
-
-	// Check for ccTLDs with second-level domains
-	if ccTLDsWithSLD[parts[tldIndex]] && commonSLDs[parts[sldIndex]] {
-		if len(parts) > 3 {
-			return strings.Join(parts[len(parts)-3:], ".")
-		}
-		return fullDomain
-	}
-
-	// For other cases, return the last two parts
-	return strings.Join(parts[sldIndex:], ".")
 }

@@ -2,6 +2,7 @@ package syntax
 
 import (
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 	"unicode"
@@ -123,4 +124,39 @@ func convertToAscii(input string) string {
 	}
 
 	return string(ascii)
+}
+
+func ExtractDomain(fullDomain string) (string, error) {
+	var domain string
+	if strings.Contains(fullDomain, "://") {
+		// It's likely a URL, so parse it
+		u, err := url.Parse(fullDomain)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse URL: %v", err)
+		}
+		domain = u.Hostname()
+	} else {
+		// It's likely just a domain, so use it as-is
+		domain = fullDomain
+	}
+
+	// Remove 'www.' prefix if present
+	domain = strings.TrimPrefix(domain, "www.")
+
+	// Get the public suffix (e.g., "co.uk", "com")
+	_, icann := publicsuffix.PublicSuffix(domain)
+
+	// If the public suffix is not managed by ICANN, we might want to handle it differently
+	if !icann {
+		return "", fmt.Errorf("non-ICANN managed domain: %s", domain)
+	}
+
+	// Extract the registrable domain (eTLD+1)
+	registrableDomain, err := publicsuffix.EffectiveTLDPlusOne(domain)
+	if err != nil {
+		return "", fmt.Errorf("failed to get eTLD+1: %v", err)
+	}
+
+	return registrableDomain, nil
+
 }

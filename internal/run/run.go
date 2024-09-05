@@ -93,15 +93,11 @@ func BuildResponse(
 		SecureGatewayProvider: domain.SecureGatewayProvider,
 		IsRisky:               isRisky,
 		Risk:                  risk,
+		AlternateEmail:        email.AlternateEmail,
 		RetryValidation:       email.RetryValidation,
 		Syntax:                syntax,
 		Smtp:                  email.SmtpResponse,
 		MailServerHealth:      email.MailServerHealth,
-	}
-
-	if !domain.IsPrimaryDomain {
-		altEmail := fmt.Sprintf("%s@%s", syntax.User, domain.PrimaryDomain)
-		response.AlternateEmail.Email = altEmail
 	}
 
 	return response

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/customeros/mailsherpa/domaincheck"
 	"github.com/customeros/mailsherpa/internal/cmd"
 )
 
@@ -24,6 +25,8 @@ func main() {
 			return
 		}
 		cmd.VerifySyntax(args[1], true)
+	case "redirect":
+		fmt.Println(domaincheck.PrimaryDomainCheck(args[1]))
 	case "version":
 		cmd.Version()
 	default:
