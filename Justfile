@@ -32,5 +32,7 @@ dist:
 	aws s3 cp ./mailsherpa-linux-arm64.tar.gz $CLOUDFLARE_R2_BUCKET/mailsherpa-linux-arm64.tar.gz --endpoint-url $CLOUDFLARE_R2_ENDPOINT
 	just clean
 
+	aws s3 cp ./install.py $CLOUDFLARE_R2_BUCKET/install.py --endpoint-url $CLOUDFLARE_R2_ENDPOINT
+
 test:
     go test ./...
