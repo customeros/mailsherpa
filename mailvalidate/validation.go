@@ -260,7 +260,6 @@ func evaluateDnsRecords(validationRequest *EmailValidationRequest, knownProvider
 
 func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 	resp.RetryValidation = true
-	greylistMinutesBeforeRetry := 75
 
 	if strings.Contains(resp.SmtpResponse.Description, "No MX records") ||
 		strings.Contains(resp.SmtpResponse.Description, "Cannot connect to any MX server") {
@@ -274,10 +273,11 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 		resp.IsDeliverable = "true"
 		resp.RetryValidation = false
 
-	case "450", "421", "451", "452":
+	case "421", "450", "451", "452", "453":
 
-		if strings.Contains(resp.SmtpResponse.Description, "user is over quota") ||
-			strings.Contains(resp.SmtpResponse.Description, "out of storage") {
+		if strings.Contains(resp.SmtpResponse.Description, "Insufficient system storage") ||
+			strings.Contains(resp.SmtpResponse.Description, "out of storage") ||
+			strings.Contains(resp.SmtpResponse.Description, "user is over quota") {
 
 			resp.IsDeliverable = "false"
 			resp.IsMailboxFull = true
@@ -285,9 +285,18 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 		}
 
 		if strings.Contains(resp.SmtpResponse.Description, "Account inbounds disabled") ||
+			strings.Contains(resp.SmtpResponse.Description, "address rejected") ||
+			strings.Contains(resp.SmtpResponse.Description, "Not verified") ||
+			strings.Contains(resp.SmtpResponse.Description, "Open relay not allowed") ||
+			strings.Contains(resp.SmtpResponse.Description, "Recipient address rejected") ||
+			strings.Contains(resp.SmtpResponse.Description, "Recipient not in route") ||
 			strings.Contains(resp.SmtpResponse.Description, "Relay access denied") ||
+			strings.Contains(resp.SmtpResponse.Description, "relay not") ||
+			strings.Contains(resp.SmtpResponse.Description, "Syntax error") ||
 			strings.Contains(resp.SmtpResponse.Description, "Temporary recipient validation error") ||
 			strings.Contains(resp.SmtpResponse.Description, "unverified address") ||
+			strings.Contains(resp.SmtpResponse.Description, "unable to verify user") ||
+			strings.Contains(resp.SmtpResponse.Description, "you are trying to use me") ||
 			resp.SmtpResponse.ErrorCode == "4.4.4" ||
 			resp.SmtpResponse.ErrorCode == "4.2.2" {
 
@@ -296,6 +305,7 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 		}
 
 		if strings.Contains(resp.SmtpResponse.Description, "Account service is temporarily unavailable") ||
+			strings.Contains(resp.SmtpResponse.Description, "greylisted") ||
 			strings.Contains(resp.SmtpResponse.Description, "Greylisted") ||
 			strings.Contains(resp.SmtpResponse.Description, "Greylisting") ||
 			strings.Contains(resp.SmtpResponse.Description, "Internal resource temporarily unavailable") ||
@@ -306,24 +316,12 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 			strings.Contains(resp.SmtpResponse.Description, "not yet authorized to deliver mail from") ||
 			strings.Contains(resp.SmtpResponse.Description, "please retry later") ||
 			strings.Contains(resp.SmtpResponse.Description, "Please try again later") ||
-			strings.Contains(resp.SmtpResponse.Description, "Recipient Temporarily Unavailable") {
+			strings.Contains(resp.SmtpResponse.Description, "Recipient Temporarily Unavailable") ||
+			strings.Contains(resp.SmtpResponse.Description, "temporarily delayed") ||
+			strings.Contains(resp.SmtpResponse.Description, "too many") ||
+			strings.Contains(resp.SmtpResponse.Description, "domain is not configured") {
 
-			resp.MailServerHealth.IsGreylisted = true
-			ip, err := ipify.GetIp()
-			if err != nil {
-				log.Println("Unable to obtain Mailserver IP")
-			}
-
-			resp.MailServerHealth.ServerIP = ip
-			resp.MailServerHealth.FromEmail = req.FromEmail
-
-			if strings.Contains(resp.SmtpResponse.Description, "5 minutes") {
-				greylistMinutesBeforeRetry = 6
-			}
-			if strings.Contains(resp.SmtpResponse.Description, "60 seconds") {
-				greylistMinutesBeforeRetry = 2
-			}
-			resp.MailServerHealth.RetryAfter = getRetryTimestamp(greylistMinutesBeforeRetry)
+			greylisted(req, resp)
 		}
 
 		if strings.Contains(resp.SmtpResponse.Description, "TLS") {
@@ -331,47 +329,83 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 			resp.RetryValidation = true
 		}
 
-	case "501", "503", "550", "551", "552", "554", "557":
+		if strings.Contains(resp.SmtpResponse.Description, "not in whitelist") ||
+			strings.Contains(resp.SmtpResponse.Description, "Sender address rejected") {
+			blacklisted(req, resp)
+		}
 
-		if strings.Contains(resp.SmtpResponse.Description, "user is over quota") ||
-			strings.Contains(resp.SmtpResponse.Description, "out of storage") {
+	case "500", "501", "503", "525", "541", "542", "550", "551", "552", "554", "557":
+
+		if strings.Contains(resp.SmtpResponse.Description, "exceeded storage") ||
+			strings.Contains(resp.SmtpResponse.Description, "Mailbox is full") ||
+			strings.Contains(resp.SmtpResponse.Description, "out of storage") ||
+			strings.Contains(resp.SmtpResponse.Description, "user is over quota") {
 
 			resp.IsDeliverable = "false"
 			resp.IsMailboxFull = true
 			resp.RetryValidation = false
 		}
 
-		if strings.Contains(resp.SmtpResponse.Description, "Address unknown") ||
+		if strings.Contains(resp.SmtpResponse.Description, "Address does not exist") ||
+			strings.Contains(resp.SmtpResponse.Description, "Address Error") ||
+			strings.Contains(resp.SmtpResponse.Description, "Address not") ||
+			strings.Contains(resp.SmtpResponse.Description, "Address unknown") ||
 			strings.Contains(resp.SmtpResponse.Description, "Bad address syntax") ||
+			strings.Contains(resp.SmtpResponse.Description, "can't verify") ||
 			strings.Contains(resp.SmtpResponse.Description, "cannot deliver mail") ||
 			strings.Contains(resp.SmtpResponse.Description, "could not deliver mail") ||
+			strings.Contains(resp.SmtpResponse.Description, "Disabled recipient") ||
 			strings.Contains(resp.SmtpResponse.Description, "dosn't exist") ||
+			strings.Contains(resp.SmtpResponse.Description, "DOES NOT EXIST") ||
+			strings.Contains(resp.SmtpResponse.Description, "I am no longer") ||
 			strings.Contains(resp.SmtpResponse.Description, "I am no longer") ||
 			strings.Contains(resp.SmtpResponse.Description, "Invalid address") ||
+			strings.Contains(resp.SmtpResponse.Description, "invalid address") ||
 			strings.Contains(resp.SmtpResponse.Description, "Invalid Recipient") ||
 			strings.Contains(resp.SmtpResponse.Description, "Invalid recipient") ||
+			strings.Contains(resp.SmtpResponse.Description, "Mailbox does not exist") ||
+			strings.Contains(resp.SmtpResponse.Description, "Mailbox is frozen") ||
 			strings.Contains(resp.SmtpResponse.Description, "Mailbox not found") ||
 			strings.Contains(resp.SmtpResponse.Description, "mailbox unavailable") ||
+			strings.Contains(resp.SmtpResponse.Description, "mailbox is unavailable") ||
 			strings.Contains(resp.SmtpResponse.Description, "mail server could not deliver") ||
 			strings.Contains(resp.SmtpResponse.Description, "message was not delivered") ||
 			strings.Contains(resp.SmtpResponse.Description, "no longer being monitored") ||
-			strings.Contains(resp.SmtpResponse.Description, "no mailbox by that name") ||
-			strings.Contains(resp.SmtpResponse.Description, "No such ID") ||
-			strings.Contains(resp.SmtpResponse.Description, "No such local user") ||
-			strings.Contains(resp.SmtpResponse.Description, "No such user") ||
-			strings.Contains(resp.SmtpResponse.Description, "No Such User Here") ||
+			strings.Contains(resp.SmtpResponse.Description, "no mail box") ||
+			strings.Contains(resp.SmtpResponse.Description, "no mailbox") ||
+			strings.Contains(resp.SmtpResponse.Description, "no such") ||
+			strings.Contains(resp.SmtpResponse.Description, "No such") ||
+			strings.Contains(resp.SmtpResponse.Description, "No Such") ||
+			strings.Contains(resp.SmtpResponse.Description, "Not allowed") ||
+			strings.Contains(resp.SmtpResponse.Description, "not a known user") ||
+			strings.Contains(resp.SmtpResponse.Description, "not exist") ||
+			strings.Contains(resp.SmtpResponse.Description, "not found") ||
+			strings.Contains(resp.SmtpResponse.Description, "not valid") ||
 			strings.Contains(resp.SmtpResponse.Description, "Recipient not found") ||
-			strings.Contains(resp.SmtpResponse.Description, "Relay not allowed") ||
-			strings.Contains(resp.SmtpResponse.Description, "relay not permitted") ||
-			strings.Contains(resp.SmtpResponse.Description, "Relaying denied") ||
-			strings.Contains(resp.SmtpResponse.Description, "relaying denied") ||
+			strings.Contains(resp.SmtpResponse.Description, "Recipient unknown") ||
+			strings.Contains(resp.SmtpResponse.Description, "refused") ||
+			strings.Contains(resp.SmtpResponse.Description, "rejected") ||
+			strings.Contains(resp.SmtpResponse.Description, "Rejected") ||
+			strings.Contains(resp.SmtpResponse.Description, "REJECTED") ||
+			strings.Contains(resp.SmtpResponse.Description, "Relay access") ||
+			strings.Contains(resp.SmtpResponse.Description, "Relay not") ||
+			strings.Contains(resp.SmtpResponse.Description, "relay not") ||
+			strings.Contains(resp.SmtpResponse.Description, "Relaying") ||
+			strings.Contains(resp.SmtpResponse.Description, "relaying") ||
 			strings.Contains(resp.SmtpResponse.Description, "Service not available") ||
 			strings.Contains(resp.SmtpResponse.Description, "that domain isn't in my list of allowed rcpthosts") ||
+			strings.Contains(resp.SmtpResponse.Description, "unable to find") ||
+			strings.Contains(resp.SmtpResponse.Description, "Unknown recipient") ||
 			strings.Contains(resp.SmtpResponse.Description, "Unknown user") ||
+			strings.Contains(resp.SmtpResponse.Description, "unknown") ||
 			strings.Contains(resp.SmtpResponse.Description, "unmonitored inbox") ||
 			strings.Contains(resp.SmtpResponse.Description, "Unroutable address") ||
+			strings.Contains(resp.SmtpResponse.Description, "user doesn't") ||
+			strings.Contains(resp.SmtpResponse.Description, "user invalid") ||
+			strings.Contains(resp.SmtpResponse.Description, "User not") ||
 			strings.Contains(resp.SmtpResponse.Description, "User unknown") ||
-			strings.Contains(resp.SmtpResponse.Description, "User not found") ||
+			strings.Contains(resp.SmtpResponse.Description, "User Unknown") ||
+			strings.Contains(resp.SmtpResponse.Description, "verification problem") ||
 			strings.Contains(resp.SmtpResponse.Description, "verify address failed") ||
 			strings.Contains(resp.SmtpResponse.Description, "We do not relay") ||
 			strings.Contains(resp.SmtpResponse.Description, "_403") ||
@@ -383,45 +417,42 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 			resp.SmtpResponse.ErrorCode == "5.2.0" ||
 			resp.SmtpResponse.ErrorCode == "5.2.1" ||
 			resp.SmtpResponse.ErrorCode == "5.4.1" ||
-			resp.SmtpResponse.ErrorCode == "5.5.1" {
+			resp.SmtpResponse.ErrorCode == "5.4.4" ||
+			resp.SmtpResponse.ErrorCode == "5.5.1" ||
+			resp.SmtpResponse.ErrorCode == "5.7.1" {
 
 			resp.IsDeliverable = "false"
 			resp.RetryValidation = false
 		}
 
 		if strings.Contains(resp.SmtpResponse.Description, "Access denied, banned sender") ||
+			strings.Contains(resp.SmtpResponse.Description, "Access Denied") ||
+			strings.Contains(resp.SmtpResponse.Description, "bad reputation") ||
 			strings.Contains(resp.SmtpResponse.Description, "barracudanetworks.com/reputation") ||
 			strings.Contains(resp.SmtpResponse.Description, "black list") ||
 			strings.Contains(resp.SmtpResponse.Description, "Blocked") ||
-			strings.Contains(resp.SmtpResponse.Description, "blocked using") ||
+			strings.Contains(resp.SmtpResponse.Description, "blocked") ||
 			strings.Contains(resp.SmtpResponse.Description, "envelope blocked") ||
 			strings.Contains(resp.SmtpResponse.Description, "ERS-DUL") ||
 			strings.Contains(resp.SmtpResponse.Description, "Listed by PBL") ||
 			strings.Contains(resp.SmtpResponse.Description, "rejected by Abusix blacklist") ||
+			strings.Contains(resp.SmtpResponse.Description, "sender rejected") ||
 			strings.Contains(resp.SmtpResponse.Description, "spf check failed") ||
 			strings.Contains(resp.SmtpResponse.Description, "Transaction failed") {
 
-			resp.MailServerHealth.IsBlacklisted = true
-			ip, err := ipify.GetIp()
-			if err != nil {
-				log.Println("Unable to obtain Mailserver IP")
-			}
-			resp.MailServerHealth.ServerIP = ip
-			resp.MailServerHealth.FromEmail = req.FromEmail
+			blacklisted(req, resp)
 		}
 
 		if strings.Contains(resp.SmtpResponse.Description, "temporarily blocked") {
-			resp.MailServerHealth.IsGreylisted = true
-			ip, err := ipify.GetIp()
-			if err != nil {
-				log.Println("Unable to obtain Mailserver IP")
-			}
-			resp.MailServerHealth.ServerIP = ip
-			resp.MailServerHealth.FromEmail = req.FromEmail
-			resp.MailServerHealth.RetryAfter = getRetryTimestamp(greylistMinutesBeforeRetry)
+			greylisted(req, resp)
 		}
 
-		if strings.Contains(resp.SmtpResponse.Description, "TLS") {
+		if strings.Contains(resp.SmtpResponse.Description, "authentication") ||
+			strings.Contains(resp.SmtpResponse.Description, "Authentication") ||
+			strings.Contains(resp.SmtpResponse.Description, "encryption") ||
+			strings.Contains(resp.SmtpResponse.Description, "TLS") ||
+			strings.Contains(resp.SmtpResponse.Description, "tls") ||
+			strings.Contains(resp.SmtpResponse.Description, "secured Connection") {
 			resp.SmtpResponse.TLSRequired = true
 			resp.RetryValidation = true
 		}
@@ -431,6 +462,46 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 			resp.IsDeliverable = "unknown"
 		}
 	}
+}
+
+func greylisted(req *EmailValidationRequest, resp *EmailValidation) {
+
+	greylistMinutesBeforeRetry := 75
+
+	resp.MailServerHealth.IsGreylisted = true
+	resp.IsDeliverable = "unknown"
+	ip, err := ipify.GetIp()
+	if err != nil {
+		log.Println("Unable to obtain Mailserver IP")
+	}
+
+	resp.MailServerHealth.ServerIP = ip
+	resp.MailServerHealth.FromEmail = req.FromEmail
+
+	if strings.Contains(resp.SmtpResponse.Description, "4 minutes") ||
+		strings.Contains(resp.SmtpResponse.Description, "5 minutes") ||
+		strings.Contains(resp.SmtpResponse.Description, "five minutes") {
+		greylistMinutesBeforeRetry = 6
+	}
+	if strings.Contains(resp.SmtpResponse.Description, "360 seconds") {
+		greylistMinutesBeforeRetry = 7
+	}
+	if strings.Contains(resp.SmtpResponse.Description, "60 seconds") ||
+		strings.Contains(resp.SmtpResponse.Description, "1 minute") {
+		greylistMinutesBeforeRetry = 2
+	}
+	resp.MailServerHealth.RetryAfter = getRetryTimestamp(greylistMinutesBeforeRetry)
+}
+
+func blacklisted(req *EmailValidationRequest, resp *EmailValidation) {
+
+	resp.MailServerHealth.IsBlacklisted = true
+	ip, err := ipify.GetIp()
+	if err != nil {
+		log.Println("Unable to obtain Mailserver IP")
+	}
+	resp.MailServerHealth.ServerIP = ip
+	resp.MailServerHealth.FromEmail = req.FromEmail
 }
 
 func catchAllTest(validationRequest *EmailValidationRequest) EmailValidation {
