@@ -274,7 +274,7 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 		resp.IsDeliverable = "true"
 		resp.RetryValidation = false
 
-	case "450", "451", "452":
+	case "450", "421", "451", "452":
 
 		if strings.Contains(resp.SmtpResponse.Description, "user is over quota") ||
 			strings.Contains(resp.SmtpResponse.Description, "out of storage") {
@@ -398,7 +398,8 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 			strings.Contains(resp.SmtpResponse.Description, "ERS-DUL") ||
 			strings.Contains(resp.SmtpResponse.Description, "Listed by PBL") ||
 			strings.Contains(resp.SmtpResponse.Description, "rejected by Abusix blacklist") ||
-			strings.Contains(resp.SmtpResponse.Description, "spf check failed") {
+			strings.Contains(resp.SmtpResponse.Description, "spf check failed") ||
+			strings.Contains(resp.SmtpResponse.Description, "Transaction failed") {
 
 			resp.MailServerHealth.IsBlacklisted = true
 			ip, err := ipify.GetIp()
