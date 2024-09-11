@@ -6,7 +6,7 @@
 
 <br /><br /><br />
 
-## 👉 Live Demo: https://customeros.ai
+## 👉 [Live Demo: https://customeros.ai](https://customeros.ai/is/email-verification)
 
 This is open-source, but we also offer a hosted API that's simple to use. If you are interested, find out more at [CustomerOS](https://docs.customeros.ai/api-reference/verify/verify-an-email-address). If you have any questions, you can contact me at matt@customeros.ai.
 
@@ -52,4 +52,10 @@ export MAIL_SERVER_DOMAIN=example.com
 
 ## Mail Server setup guide
 
-You might be asking why you need to setup a mail server...
+You might be asking why you need to setup a mail server.  For basic testing, you don't. Just set the mailserver domain to whatever you want and run locally. 
+
+However, what you'll quickly find is some email servers check to see if the verification request is coming from a legit mail server, and if not, they block it.
+
+To get around this, you need a server with access to port 25 (we like Hetzner or OVH), configured to look like a mail server.  
+
+If you would like help setting this up, ping me at matt@customeros.ai
