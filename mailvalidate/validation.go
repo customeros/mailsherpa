@@ -31,10 +31,13 @@ type DomainValidationParams struct {
 }
 
 type SyntaxValidation struct {
-	IsValid    bool
-	User       string
-	Domain     string
-	CleanEmail string
+	Error         string
+	IsValid       bool
+	User          string
+	Domain        string
+	CleanEmail    string
+	IsRoleAccount bool
+	IsFreeAccount bool
 }
 
 type AlternateEmail struct {
@@ -92,14 +95,46 @@ func ValidateEmailSyntax(email string) SyntaxValidation {
 
 	user, domain, ok := syntax.GetEmailUserAndDomain(cleanEmail)
 	if !ok {
-		return SyntaxValidation{}
+		return SyntaxValidation{
+			IsValid: false,
+		}
 	}
-	return SyntaxValidation{
+
+	returnedSyntaxValidation := SyntaxValidation{
 		IsValid:    true,
 		User:       user,
 		Domain:     domain,
 		CleanEmail: cleanEmail,
 	}
+
+	freeEmails, err := GetFreeEmailList()
+	if err != nil {
+		returnedSyntaxValidation.Error = fmt.Sprintf("Error getting free email list: %s", err.Error())
+		return returnedSyntaxValidation
+	}
+
+	roleAccounts, err := GetRoleAccounts()
+	if err != nil {
+		returnedSyntaxValidation.Error = fmt.Sprintf("Error getting role accounts list: %s", err.Error())
+		return returnedSyntaxValidation
+	}
+
+	isFreeEmail, err := IsFreeEmailCheck(cleanEmail, &freeEmails)
+	if err != nil {
+		returnedSyntaxValidation.Error = fmt.Sprintf("Error running free email check: %s", err.Error())
+		return returnedSyntaxValidation
+	}
+
+	isRoleAccount, err := IsRoleAccountCheck(cleanEmail, &roleAccounts)
+	if err != nil {
+		returnedSyntaxValidation.Error = fmt.Sprintf("Error running role account check: %s", err.Error())
+		return returnedSyntaxValidation
+	}
+
+	returnedSyntaxValidation.IsFreeAccount = isFreeEmail
+	returnedSyntaxValidation.IsRoleAccount = isRoleAccount
+
+	return returnedSyntaxValidation
 }
 
 func ValidateDomain(validationRequest EmailValidationRequest) DomainValidation {
