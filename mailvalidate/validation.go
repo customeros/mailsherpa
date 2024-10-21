@@ -253,8 +253,6 @@ func ValidateEmail(validationRequest EmailValidationRequest) EmailValidation {
 			results.AlternateEmail.Email = fmt.Sprintf("%s@%s", emailSyntaxResult.User, validationRequest.DomainValidationParams.PrimaryDomain)
 		}
 	}
-	fmt.Println(validationRequest.DomainValidationParams)
-	fmt.Println(results.AlternateEmail.Email)
 
 	return results
 }
