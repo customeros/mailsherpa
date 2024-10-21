@@ -53,6 +53,12 @@ func isRandomUsername(username string) bool {
 		return true
 	}
 
+	// Check for UUID-like patterns (including those with prefixes)
+	uuidPattern := regexp.MustCompile(`[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}`)
+	if uuidPattern.MatchString(username) {
+		return true
+	}
+
 	// Check for long random string followed by a more structured part
 	randomStructuredPattern := regexp.MustCompile(`^[a-z0-9]{20,}[-=][a-z0-9._-]+$`)
 	if randomStructuredPattern.MatchString(username) {
