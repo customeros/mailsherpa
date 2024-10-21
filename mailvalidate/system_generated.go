@@ -24,7 +24,7 @@ func isNumeric(s string) bool {
 
 func isRandomUsername(username string) bool {
 	// Check if the username contains only allowed characters
-	allowedChars := regexp.MustCompile(`^[a-zA-Z0-9.=_-]+$`)
+	allowedChars := regexp.MustCompile(`^[a-zA-Z0-9.=_+!#$%&'*+/=?^_{|}~-]+$`)
 	if !allowedChars.MatchString(username) {
 		return false
 	}
@@ -62,6 +62,27 @@ func isRandomUsername(username string) bool {
 	// Check for long random string followed by a more structured part
 	randomStructuredPattern := regexp.MustCompile(`^[a-z0-9]{20,}[-=][a-z0-9._-]+$`)
 	if randomStructuredPattern.MatchString(username) {
+		return true
+	}
+
+	// Check for email aliases with random strings
+	aliasPattern := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+\+[a-zA-Z0-9]{8,}$`)
+	if aliasPattern.MatchString(username) {
+		return true
+	}
+
+	// New pattern: Check for short random alphanumeric strings
+	shortRandomPattern := regexp.MustCompile(`^[a-z0-9]{6,10}$`)
+	if shortRandomPattern.MatchString(username) {
+		return true
+	}
+
+	if strings.Count(username, "_") > 2 {
+		return true
+	}
+
+	if strings.Contains(username, "=") ||
+		strings.Contains(username, "--") {
 		return true
 	}
 
