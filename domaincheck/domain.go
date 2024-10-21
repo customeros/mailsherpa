@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
+
+	"golang.org/x/net/publicsuffix"
 
 	"github.com/customeros/mailsherpa/internal/syntax"
 )
@@ -20,12 +23,21 @@ type DNS struct {
 }
 
 func PrimaryDomainCheck(domain string) (bool, string) {
-	dns := CheckDNS(domain)
-	redirects, primaryDomain := CheckRedirects(domain)
+	root, subdomain, err := parseRootAndSubdomain(domain)
+	if err != nil {
+		root = domain
+	}
+	dns := CheckDNS(root)
+	redirects, primaryDomain := CheckRedirects(root)
 
 	if !redirects && dns.CNAME == "" && len(dns.MX) > 0 && dns.HasA {
-		return true, ""
+		if subdomain == "" {
+			return true, ""
+		} else {
+			return false, root
+		}
 	}
+
 	return false, primaryDomain
 }
 
@@ -80,6 +92,31 @@ func CheckRedirects(domain string) (bool, string) {
 	}
 
 	return false, ""
+}
+
+func parseRootAndSubdomain(input string) (string, string, error) {
+	// Ensure the input has a scheme
+	if !strings.Contains(input, "://") {
+		input = "https://" + input
+	}
+
+	// Parse the URL
+	u, err := url.Parse(input)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Get the domain and TLD using the public suffix list
+	domain, err := publicsuffix.EffectiveTLDPlusOne(u.Hostname())
+	if err != nil {
+		return "", "", err
+	}
+
+	// The subdomain is everything before the domain
+	subdomain := strings.TrimSuffix(u.Hostname(), domain)
+	subdomain = strings.TrimSuffix(subdomain, ".")
+
+	return domain, subdomain, nil
 }
 
 func getMXRecordsForDomain(domain string) ([]string, error) {

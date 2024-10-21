@@ -490,6 +490,7 @@ contains = [
   'member',
   'mentors',
   'merchant',
+  'messenger',
   'metrics',
   'mgmt',
   'microsoft',
