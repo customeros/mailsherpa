@@ -31,13 +31,14 @@ type DomainValidationParams struct {
 }
 
 type SyntaxValidation struct {
-	Error         string
-	IsValid       bool
-	User          string
-	Domain        string
-	CleanEmail    string
-	IsRoleAccount bool
-	IsFreeAccount bool
+	Error             string
+	IsValid           bool
+	User              string
+	Domain            string
+	CleanEmail        string
+	IsRoleAccount     bool
+	IsFreeAccount     bool
+	IsSystemGenerated bool
 }
 
 type AlternateEmail struct {
@@ -101,10 +102,11 @@ func ValidateEmailSyntax(email string) SyntaxValidation {
 	}
 
 	returnedSyntaxValidation := SyntaxValidation{
-		IsValid:    true,
-		User:       user,
-		Domain:     domain,
-		CleanEmail: cleanEmail,
+		IsValid:           true,
+		User:              user,
+		Domain:            domain,
+		CleanEmail:        cleanEmail,
+		IsSystemGenerated: IsSystemGeneratedUser(user),
 	}
 
 	freeEmails, err := GetFreeEmailList()
@@ -167,12 +169,7 @@ func ValidateDomainWithCustomKnownProviders(validationRequest EmailValidationReq
 		return results
 	}
 
-	redirects, primaryDomain := domaincheck.CheckRedirects(domain)
-	if !redirects && validationRequest.Dns.CNAME == "" && results.HasMXRecord && validationRequest.Dns.HasA {
-		results.IsPrimaryDomain = true
-	} else {
-		results.PrimaryDomain = primaryDomain
-	}
+	results.IsPrimaryDomain, results.PrimaryDomain = domaincheck.PrimaryDomainCheck(domain)
 
 	catchAllResults := catchAllTest(&validationRequest)
 
@@ -256,6 +253,8 @@ func ValidateEmail(validationRequest EmailValidationRequest) EmailValidation {
 			results.AlternateEmail.Email = fmt.Sprintf("%s@%s", emailSyntaxResult.User, validationRequest.DomainValidationParams.PrimaryDomain)
 		}
 	}
+	fmt.Println(validationRequest.DomainValidationParams)
+	fmt.Println(results.AlternateEmail.Email)
 
 	return results
 }
@@ -500,7 +499,6 @@ func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
 }
 
 func greylisted(req *EmailValidationRequest, resp *EmailValidation) {
-
 	greylistMinutesBeforeRetry := 75
 
 	resp.MailServerHealth.IsGreylisted = true
@@ -529,7 +527,6 @@ func greylisted(req *EmailValidationRequest, resp *EmailValidation) {
 }
 
 func blacklisted(req *EmailValidationRequest, resp *EmailValidation) {
-
 	resp.MailServerHealth.IsBlacklisted = true
 	ip, err := ipify.GetIp()
 	if err != nil {
