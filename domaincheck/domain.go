@@ -23,15 +23,33 @@ type DNS struct {
 }
 
 func PrimaryDomainCheck(domain string) (bool, string) {
+	// denotes if domain needs to be expanded
+	expand := false
+
+	if strings.Contains(domain, "bit.ly/") {
+		expand = true
+		_, domain = CheckRedirects(domain)
+	}
+
 	root, subdomain, err := parseRootAndSubdomain(domain)
 	if err != nil {
 		root = domain
 	}
+
+	// Try connection check first - faster than HTTP request
+	if !checkConnection(root) {
+		return false, ""
+	}
+
 	dns := CheckDNS(root)
 	redirects, primaryDomain := CheckRedirects(root)
 
+	if primaryDomain == "linktr.ee" {
+		return false, ""
+	}
+
 	if !redirects && dns.CNAME == "" && len(dns.MX) > 0 && dns.HasA {
-		if subdomain == "" {
+		if subdomain == "" && !expand {
 			return true, ""
 		} else {
 			return false, root
@@ -64,12 +82,15 @@ func CheckDNS(domain string) DNS {
 }
 
 func CheckRedirects(domain string) (bool, string) {
+	domain = strings.TrimPrefix(domain, "http://")
+	domain = strings.TrimPrefix(domain, "https://")
+
 	// Check for HTTP/HTTPS redirects
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
-		Timeout: 10 * time.Second,
+		Timeout: 5 * time.Second,
 	}
 
 	for _, protocol := range []string{"http", "https"} {
@@ -82,10 +103,10 @@ func CheckRedirects(domain string) (bool, string) {
 
 		if resp.StatusCode >= 300 && resp.StatusCode < 400 {
 			location := resp.Header.Get("Location")
-			if location != "" {
-				location, _ = syntax.ExtractDomain(location)
-				if location != domain {
-					return true, location
+			if location != "" && !strings.HasPrefix(location, "/") {
+				loc, _ := syntax.ExtractDomain(location)
+				if loc != domain {
+					return true, loc
 				}
 			}
 		}
@@ -94,11 +115,25 @@ func CheckRedirects(domain string) (bool, string) {
 	return false, ""
 }
 
+func checkConnection(domain string) bool {
+	// Try both HTTP and HTTPS ports
+	for _, port := range []string{":80", ":443"} {
+		conn, err := net.DialTimeout("tcp", domain+port, time.Second)
+		if err == nil {
+			conn.Close()
+			return true
+		}
+	}
+	return false
+}
+
 func parseRootAndSubdomain(input string) (string, string, error) {
 	// Ensure the input has a scheme
 	if !strings.Contains(input, "://") {
 		input = "https://" + input
 	}
+
+	input = strings.Replace(input, "http:", "https:", 1)
 
 	// Parse the URL
 	u, err := url.Parse(input)
