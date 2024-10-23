@@ -35,18 +35,17 @@ func PrimaryDomainCheck(domain string) (bool, string) {
 	if err != nil {
 		root = domain
 	}
+	if root == "linktr.ee" {
+		return false, ""
+	}
 
 	// Try connection check first - faster than HTTP request
 	if !checkConnection(root) {
 		return false, ""
 	}
 
-	dns := CheckDNS(root)
 	redirects, primaryDomain := CheckRedirects(root)
-
-	if primaryDomain == "linktr.ee" {
-		return false, ""
-	}
+	dns := CheckDNS(root)
 
 	if !redirects && dns.CNAME == "" && len(dns.MX) > 0 && dns.HasA {
 		if subdomain == "" && !expand {
