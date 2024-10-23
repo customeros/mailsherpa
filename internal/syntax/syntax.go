@@ -136,27 +136,28 @@ func ExtractDomain(fullDomain string) (string, error) {
 		}
 		domain = u.Hostname()
 	} else {
-		// It's likely just a domain, so use it as-is
 		domain = fullDomain
 	}
-
 	// Remove 'www.' prefix if present
 	domain = strings.TrimPrefix(domain, "www.")
 
+	// If the domain is already in its simplest form, return it
+	if !strings.Contains(domain, ".") ||
+		len(strings.Split(domain, ".")) == 2 {
+		return domain, nil
+	}
+
 	// Get the public suffix (e.g., "co.uk", "com")
 	_, icann := publicsuffix.PublicSuffix(domain)
-
-	// If the public suffix is not managed by ICANN, we might want to handle it differently
 	if !icann {
-		return "", fmt.Errorf("non-ICANN managed domain: %s", domain)
+		// Instead of returning error, just return the domain
+		return domain, nil
 	}
 
-	// Extract the registrable domain (eTLD+1)
+	// Try to get eTLD+1, if it fails, return original domain
 	registrableDomain, err := publicsuffix.EffectiveTLDPlusOne(domain)
 	if err != nil {
-		return "", fmt.Errorf("failed to get eTLD+1: %v", err)
+		return domain, nil
 	}
-
 	return registrableDomain, nil
-
 }
