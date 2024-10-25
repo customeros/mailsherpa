@@ -26,7 +26,8 @@ func PrimaryDomainCheck(domain string) (bool, string) {
 	// denotes if domain needs to be expanded
 	expand := false
 
-	if strings.Contains(domain, "bit.ly/") {
+	if strings.Contains(domain, "bit.ly/") ||
+		strings.Contains(domain, "hubs.ly/") {
 		expand = true
 		_, domain = CheckRedirects(domain)
 	}
