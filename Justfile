@@ -34,5 +34,8 @@ dist:
 
 	aws s3 cp ./install.py $CLOUDFLARE_R2_BUCKET/install.py --endpoint-url $CLOUDFLARE_R2_ENDPOINT
 
+run *ARGS: 
+	go run main.go {{ARGS}}
+
 test:
     go test ./...
