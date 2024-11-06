@@ -121,6 +121,7 @@ matches = [
 ]
 
 contains = [
+  '-leave',
   'abuse',
   'academy',
   'access',
@@ -765,6 +766,7 @@ contains = [
   'secretaris',
   'secretary',
   'security',
+  'seedcamp',
   'sekretariat',
   'seminar',
   'seniors',

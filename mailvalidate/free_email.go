@@ -17,7 +17,12 @@ type FreeEmails struct {
 	FreeEmailList []string `toml:"free_emails"`
 }
 
-func IsFreeEmailCheck(email string, freeEmails *FreeEmails) (bool, error) {
+func IsFreeEmailCheck(email string) (bool, error) {
+	freeEmails, err := getFreeEmailList()
+	if err != nil {
+		return false, err
+	}
+
 	_, domain, ok := syntax.GetEmailUserAndDomain(email)
 	if !ok {
 		return false, fmt.Errorf("Not a valid email address")
@@ -29,7 +34,7 @@ func IsFreeEmailCheck(email string, freeEmails *FreeEmails) (bool, error) {
 	return false, nil
 }
 
-func GetFreeEmailList() (FreeEmails, error) {
+func getFreeEmailList() (FreeEmails, error) {
 	var freeEmails FreeEmails
 
 	// Read the file

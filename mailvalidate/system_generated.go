@@ -6,11 +6,9 @@ import (
 	"unicode"
 )
 
+// IsSystemGeneratedUser checks if a username appears to be system generated
 func IsSystemGeneratedUser(user string) bool {
-	if isNumeric(user) || isRandomUsername(user) {
-		return true
-	}
-	return false
+	return isNumeric(user) || isRandomUsername(user)
 }
 
 func isNumeric(s string) bool {
@@ -23,25 +21,59 @@ func isNumeric(s string) bool {
 }
 
 func isRandomUsername(username string) bool {
-	// Check if the username contains only allowed characters
+	// Basic validation for allowed characters in email usernames
 	allowedChars := regexp.MustCompile(`^[a-zA-Z0-9.=_+!#$%&'*+/=?^_{|}~-]+$`)
 	if !allowedChars.MatchString(username) {
 		return false
 	}
 
-	// Check for patterns with many numbers and dashes
-	numDashPattern := regexp.MustCompile(`(\d+-){3,}|\d{5,}`)
-	if numDashPattern.MatchString(username) {
+	// Skip common name patterns (initials/name with numbers)
+	namePattern := regexp.MustCompile(`^[a-z]+\.[a-z]+\d{1,4}$`)
+	if namePattern.MatchString(username) && len(username) < 20 {
+		return false
+	}
+
+	// Common system-generated patterns - check these before entropy
+	systemPatterns := []*regexp.Regexp{
+		// ld- and usr- patterns
+		regexp.MustCompile(`^(ld|usr)-[a-z0-9]{8,}$`),
+		// Unsubscribe patterns
+		regexp.MustCompile(`^unsub-[a-f0-9]{8}`),
+		regexp.MustCompile(`^[0-9]+\.[a-z0-9]{30,}`),
+		// UUID patterns
+		regexp.MustCompile(`[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}`),
+		// System email prefixes
+		regexp.MustCompile(`^(bounce|return|system|noreply|no-reply|donotreply|do-not-reply|unsubscribe)[-.][a-z0-9]`),
+		// Common prefixes with random strings
+		regexp.MustCompile(`^(usr|user|tmp|temp|random)-[a-z0-9]{8,}$`),
+	}
+
+	for _, pattern := range systemPatterns {
+		if pattern.MatchString(username) {
+			return true
+		}
+	}
+
+	// Check entropy for non-name-like patterns
+	if isHighEntropy(username) && len(username) > 12 {
 		return true
 	}
 
-	// Check for long hexadecimal-like strings
-	hexPattern := regexp.MustCompile(`^[a-f0-9]{10,}$`)
-	if hexPattern.MatchString(username) {
+	// Quick checks for obvious patterns
+	if strings.Count(username, "_") > 2 ||
+		strings.Contains(username, "=") ||
+		strings.Contains(username, "--") ||
+		len(username) >= 40 {
 		return true
 	}
 
-	// Check for multiple segments separated by dots with numbers
+	// Check if string after hyphen is random-looking
+	parts := strings.Split(username, "-")
+	if len(parts) == 2 && len(parts[1]) >= 8 {
+		return isHighEntropy(parts[1])
+	}
+
+	// Check for multiple numeric segments
 	segments := strings.Split(username, ".")
 	numericSegments := 0
 	for _, segment := range segments {
@@ -49,45 +81,50 @@ func isRandomUsername(username string) bool {
 			numericSegments++
 		}
 	}
-	if numericSegments >= 3 {
-		return true
+
+	return numericSegments >= 3
+}
+
+func isHighEntropy(s string) bool {
+	if len(s) < 8 {
+		return false
 	}
 
-	// Check for UUID-like patterns (including those with prefixes)
-	uuidPattern := regexp.MustCompile(`[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}`)
-	if uuidPattern.MatchString(username) {
-		return true
+	// Skip if it looks like a name with numbers but ensure we don't skip system patterns
+	nameWithNumbersPattern := regexp.MustCompile(`^[a-z]+\.?[a-z]*\d{1,4}$`)
+	if nameWithNumbersPattern.MatchString(s) && len(s) < 20 {
+		return false
 	}
 
-	// Check for long random string followed by a more structured part
-	randomStructuredPattern := regexp.MustCompile(`^[a-z0-9]{20,}[-=][a-z0-9._-]+$`)
-	if randomStructuredPattern.MatchString(username) {
-		return true
+	charMap := make(map[rune]bool)
+	consecutiveSame := 1
+	maxConsecutive := 1
+	var lastChar rune
+
+	for i, char := range s {
+		charMap[char] = true
+
+		if i > 0 {
+			if char == lastChar {
+				consecutiveSame++
+				if consecutiveSame > maxConsecutive {
+					maxConsecutive = consecutiveSame
+				}
+			} else {
+				consecutiveSame = 1
+			}
+		}
+		lastChar = char
 	}
 
-	// Check for email aliases with random strings
-	aliasPattern := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+\+[a-zA-Z0-9]{8,}$`)
-	if aliasPattern.MatchString(username) {
-		return true
-	}
+	uniqueRatio := float64(len(charMap)) / float64(len(s))
+	consecutiveRatio := float64(maxConsecutive) / float64(len(s))
+	transitions := countTransitions(s)
 
-	// New pattern: Check for short random alphanumeric strings
-	shortRandomPattern := regexp.MustCompile(`^[a-z0-9]{6,10}$`)
-	if shortRandomPattern.MatchString(username) {
-		return true
-	}
-
-	if strings.Count(username, "_") > 2 {
-		return true
-	}
-
-	if strings.Contains(username, "=") ||
-		strings.Contains(username, "--") {
-		return true
-	}
-
-	// If none of the above patterns match, it's likely not a random username
-	return false
+	return ((uniqueRatio > 0.6 && len(s) > 12) ||
+		(uniqueRatio > 0.7 && len(s) >= 8) ||
+		transitions > 4) &&
+		consecutiveRatio < 0.3
 }
 
 func countTransitions(s string) int {
@@ -119,3 +156,4 @@ func charTypeCheck(r rune) charType {
 	}
 	return otherType
 }
+

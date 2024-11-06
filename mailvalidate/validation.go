@@ -109,25 +109,13 @@ func ValidateEmailSyntax(email string) SyntaxValidation {
 		IsSystemGenerated: IsSystemGeneratedUser(user),
 	}
 
-	freeEmails, err := GetFreeEmailList()
-	if err != nil {
-		returnedSyntaxValidation.Error = fmt.Sprintf("Error getting free email list: %s", err.Error())
-		return returnedSyntaxValidation
-	}
-
-	roleAccounts, err := GetRoleAccounts()
-	if err != nil {
-		returnedSyntaxValidation.Error = fmt.Sprintf("Error getting role accounts list: %s", err.Error())
-		return returnedSyntaxValidation
-	}
-
-	isFreeEmail, err := IsFreeEmailCheck(cleanEmail, &freeEmails)
+	isFreeEmail, err := IsFreeEmailCheck(cleanEmail)
 	if err != nil {
 		returnedSyntaxValidation.Error = fmt.Sprintf("Error running free email check: %s", err.Error())
 		return returnedSyntaxValidation
 	}
 
-	isRoleAccount, err := IsRoleAccountCheck(cleanEmail, &roleAccounts)
+	isRoleAccount, err := IsRoleAccountCheck(cleanEmail)
 	if err != nil {
 		returnedSyntaxValidation.Error = fmt.Sprintf("Error running role account check: %s", err.Error())
 		return returnedSyntaxValidation
@@ -171,14 +159,22 @@ func ValidateDomainWithCustomKnownProviders(validationRequest EmailValidationReq
 
 	results.IsPrimaryDomain, results.PrimaryDomain = domaincheck.PrimaryDomainCheck(domain)
 
-	catchAllResults := catchAllTest(&validationRequest)
-
-	if catchAllResults.IsDeliverable == "true" {
-		results.IsCatchAll = true
+	isFreeEmail, err := IsFreeEmailCheck(validationRequest.Email)
+	if err != nil {
+		results.Error = fmt.Sprintf("Error running free email check: %v", err)
+		return results
 	}
 
-	results.MailServerHealth = catchAllResults.MailServerHealth
-	results.SmtpResponse = catchAllResults.SmtpResponse
+	if !isFreeEmail {
+		catchAllResults := catchAllTest(&validationRequest)
+
+		if catchAllResults.IsDeliverable == "true" {
+			results.IsCatchAll = true
+		}
+
+		results.MailServerHealth = catchAllResults.MailServerHealth
+		results.SmtpResponse = catchAllResults.SmtpResponse
+	}
 
 	return results
 }
@@ -204,28 +200,16 @@ func ValidateEmail(validationRequest EmailValidationRequest) EmailValidation {
 		return results
 	}
 
-	freeEmails, err := GetFreeEmailList()
-	if err != nil {
-		results.Error = fmt.Sprintf("Error getting free email list: %v", err)
-		return results
-	}
-
-	roleAccounts, err := GetRoleAccounts()
-	if err != nil {
-		results.Error = fmt.Sprintf("Error getting role accounts list: %v", err)
-		return results
-	}
-
 	email := emailSyntaxResult.CleanEmail
 
-	isFreeEmail, err := IsFreeEmailCheck(email, &freeEmails)
+	isFreeEmail, err := IsFreeEmailCheck(email)
 	if err != nil {
 		results.Error = fmt.Sprintf("Error running free email check: %v", err)
 		return results
 	}
 	results.IsFreeAccount = isFreeEmail
 
-	isRoleAccount, err := IsRoleAccountCheck(email, &roleAccounts)
+	isRoleAccount, err := IsRoleAccountCheck(email)
 	if err != nil {
 		results.Error = fmt.Sprintf("Error running role account check: %v", err)
 		return results

@@ -19,7 +19,12 @@ type RoleAccounts struct {
 	Matches  []string `toml:"matches"`
 }
 
-func IsRoleAccountCheck(email string, roleAccounts *RoleAccounts) (bool, error) {
+func IsRoleAccountCheck(email string) (bool, error) {
+	roleAccounts, err := getRoleAccounts()
+	if err != nil {
+		return false, err
+	}
+
 	user, _, ok := syntax.GetEmailUserAndDomain(email)
 	if !ok {
 		return false, fmt.Errorf("Not a valid email address")
@@ -38,7 +43,7 @@ func IsRoleAccountCheck(email string, roleAccounts *RoleAccounts) (bool, error) 
 	return false, nil
 }
 
-func GetRoleAccounts() (RoleAccounts, error) {
+func getRoleAccounts() (RoleAccounts, error) {
 	var roleAccounts RoleAccounts
 
 	// Read the file
