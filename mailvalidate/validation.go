@@ -106,7 +106,7 @@ func ValidateEmailSyntax(email string) SyntaxValidation {
 		User:              user,
 		Domain:            domain,
 		CleanEmail:        cleanEmail,
-		IsSystemGenerated: IsSystemGeneratedUser(user),
+		IsSystemGenerated: syntax.IsSystemGeneratedUser(user),
 	}
 
 	isFreeEmail, err := IsFreeEmailCheck(cleanEmail)

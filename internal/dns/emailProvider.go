@@ -10,7 +10,7 @@ func GetEmailProviderFromMx(dns domaincheck.DNS, knownProviders KnownProviders) 
 		return "", ""
 	}
 	for _, record := range dns.MX {
-		domain, err := syntax.ExtractDomain(record)
+		domain, err := syntax.ExtractRootDomain(record)
 		if err != nil {
 			continue
 		}

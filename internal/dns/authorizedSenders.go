@@ -46,7 +46,7 @@ func processIncludes(spfRecord string, knownProviders *KnownProviders) Authorize
 		if len(include) < 2 {
 			continue
 		}
-		includeDomain, err := syntax.ExtractDomain(include[1])
+		includeDomain, err := syntax.ExtractRootDomain(include[1])
 		if err != nil {
 			log.Printf("Error: %v", err)
 		}

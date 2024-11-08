@@ -4,12 +4,9 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"net/url"
 	"sort"
 	"strings"
 	"time"
-
-	"golang.org/x/net/publicsuffix"
 
 	"github.com/customeros/mailsherpa/internal/syntax"
 )
@@ -23,37 +20,45 @@ type DNS struct {
 }
 
 func PrimaryDomainCheck(domain string) (bool, string) {
-	// denotes if domain needs to be expanded
-	expand := false
+	var expanded bool
+	domain, expanded = expandShortURL(domain)
 
-	if strings.Contains(domain, "bit.ly/") ||
-		strings.Contains(domain, "hubs.ly/") {
-		expand = true
-		_, domain = CheckRedirects(domain)
-	}
-
-	root, subdomain, err := parseRootAndSubdomain(domain)
+	// Parse domain into root and subdomain
+	root, subdomain, err := syntax.ParseRootAndSubdomain(domain)
 	if err != nil {
 		root = domain
 	}
+
+	// Exclude known exceptions
 	if root == "linktr.ee" {
 		return false, ""
 	}
 
-	// Try connection check first - faster than HTTP request
+	// Check if domain is accessible
 	if !checkConnection(root) {
 		return false, ""
 	}
 
-	redirects, primaryDomain := CheckRedirects(root)
-	dns := CheckDNS(root)
+	// Check for redirects
+	hasRedirect, primaryDomain := DomainRedirectCheck(root)
 
-	if !redirects && dns.CNAME == "" && len(dns.MX) > 0 && dns.HasA {
-		if subdomain == "" && !expand {
+	// Get DNS information
+	dnsInfo := CheckDNS(root)
+
+	// Check if domain is a primary domain
+	isPrimaryDomain := !hasRedirect &&
+		dnsInfo.CNAME == "" &&
+		len(dnsInfo.MX) > 0 &&
+		dnsInfo.HasA
+
+	if isPrimaryDomain {
+		// If no subdomain and domain wasn't expanded from a shortener,
+		// it's a valid primary domain
+		if subdomain == "" && !expanded {
 			return true, ""
-		} else {
-			return false, root
 		}
+		// Otherwise, return the root domain
+		return false, root
 	}
 
 	return false, primaryDomain
@@ -81,11 +86,16 @@ func CheckDNS(domain string) DNS {
 	return dns
 }
 
-func CheckRedirects(domain string) (bool, string) {
+func DomainRedirectCheck(domain string) (bool, string) {
+	// Clean up the domain input
 	domain = strings.TrimPrefix(domain, "http://")
 	domain = strings.TrimPrefix(domain, "https://")
+	domain = strings.TrimSpace(domain)
 
-	// Check for HTTP/HTTPS redirects
+	// Initialize final redirect location
+	var finalLoc string
+
+	// Configure HTTP client
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
@@ -93,6 +103,7 @@ func CheckRedirects(domain string) (bool, string) {
 		Timeout: 5 * time.Second,
 	}
 
+	// Check both HTTP and HTTPS
 	for _, protocol := range []string{"http", "https"} {
 		url := fmt.Sprintf("%s://%s", protocol, domain)
 		resp, err := client.Get(url)
@@ -101,17 +112,30 @@ func CheckRedirects(domain string) (bool, string) {
 		}
 		defer resp.Body.Close()
 
-		if resp.StatusCode >= 300 && resp.StatusCode < 400 {
-			location := resp.Header.Get("Location")
-			if location != "" && !strings.HasPrefix(location, "/") {
-				loc, _ := syntax.ExtractDomain(location)
-				if loc != domain {
-					return true, loc
-				}
-			}
+		// Check if it's a redirect status code (300-399)
+		if resp.StatusCode < 300 || resp.StatusCode >= 400 {
+			continue
+		}
+
+		location := resp.Header.Get("Location")
+		if location == "" || strings.HasPrefix(location, "/") {
+			continue
+		}
+
+		// Extract root domain from redirect location
+		redirectDomain, err := syntax.ExtractRootDomain(location)
+		if err != nil {
+			continue
+		}
+
+		// If redirect domain is different from original domain
+		if redirectDomain != domain {
+			finalLoc = redirectDomain
+			return true, finalLoc
 		}
 	}
 
+	// No valid redirects found
 	return false, ""
 }
 
@@ -125,33 +149,6 @@ func checkConnection(domain string) bool {
 		}
 	}
 	return false
-}
-
-func parseRootAndSubdomain(input string) (string, string, error) {
-	// Ensure the input has a scheme
-	if !strings.Contains(input, "://") {
-		input = "https://" + input
-	}
-
-	input = strings.Replace(input, "http:", "https:", 1)
-
-	// Parse the URL
-	u, err := url.Parse(input)
-	if err != nil {
-		return "", "", err
-	}
-
-	// Get the domain and TLD using the public suffix list
-	domain, err := publicsuffix.EffectiveTLDPlusOne(u.Hostname())
-	if err != nil {
-		return "", "", err
-	}
-
-	// The subdomain is everything before the domain
-	subdomain := strings.TrimSuffix(u.Hostname(), domain)
-	subdomain = strings.TrimSuffix(subdomain, ".")
-
-	return domain, subdomain, nil
 }
 
 func getMXRecordsForDomain(domain string) ([]string, error) {
@@ -234,4 +231,22 @@ func parseTXTRecord(record string) string {
 	record = strings.Join(strings.Fields(record), " ")
 
 	return record
+}
+
+func expandShortURL(domain string) (string, bool) {
+	urlShorteners := []string{
+		"bit.ly/",
+		"hubs.ly/",
+	}
+
+	for _, shortener := range urlShorteners {
+		if strings.Contains(domain, shortener) {
+			isRedirect, expandedDomain := DomainRedirectCheck(domain)
+			if isRedirect {
+				return expandedDomain, true
+			}
+			break
+		}
+	}
+	return domain, false
 }
