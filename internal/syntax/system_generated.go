@@ -1,4 +1,4 @@
-package mailvalidate
+package syntax
 
 import (
 	"regexp"
@@ -156,4 +156,3 @@ func charTypeCheck(r rune) charType {
 	}
 	return otherType
 }
-
