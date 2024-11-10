@@ -1,8 +1,9 @@
-package dns
+package emailproviders
 
 import (
 	"embed"
 	"fmt"
+
 	"github.com/BurntSushi/toml"
 )
 

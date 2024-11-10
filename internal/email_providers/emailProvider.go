@@ -1,4 +1,4 @@
-package dns
+package emailproviders
 
 import (
 	"github.com/customeros/mailsherpa/domaincheck"
@@ -20,14 +20,8 @@ func GetEmailProviderFromMx(dns domaincheck.DNS, knownProviders KnownProviders) 
 		}
 
 		switch category {
-		case "enterprise":
+		case "enterprise", "webmail", "hosting", "security":
 			return provider, ""
-		case "webmail":
-			return provider, ""
-		case "hosting":
-			return provider, ""
-		case "security":
-			return "", provider
 		default:
 			return "", ""
 		}

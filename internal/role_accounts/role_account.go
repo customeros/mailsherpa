@@ -1,4 +1,4 @@
-package mailvalidate
+package roleaccounts
 
 import (
 	"embed"
@@ -7,8 +7,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"golang.org/x/exp/slices"
-
-	"github.com/customeros/mailsherpa/internal/syntax"
 )
 
 //go:embed role_emails.toml
@@ -19,23 +17,18 @@ type RoleAccounts struct {
 	Matches  []string `toml:"matches"`
 }
 
-func IsRoleAccountCheck(email string) (bool, error) {
+func IsRoleAccountCheck(username string) (bool, error) {
 	roleAccounts, err := getRoleAccounts()
 	if err != nil {
 		return false, err
 	}
 
-	user, _, ok := syntax.GetEmailUserAndDomain(email)
-	if !ok {
-		return false, fmt.Errorf("Not a valid email address")
-	}
-
-	if slices.Contains(roleAccounts.Matches, user) {
+	if slices.Contains(roleAccounts.Matches, username) {
 		return true, nil
 	}
 
 	for _, value := range roleAccounts.Contains {
-		if strings.Contains(user, value) {
+		if strings.Contains(username, value) {
 			return true, nil
 		}
 	}

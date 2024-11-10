@@ -1,7 +1,6 @@
 package syntax
 
 import (
-	"regexp"
 	"strings"
 	"unicode"
 
@@ -10,40 +9,28 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-var domainRegex = regexp.MustCompile(`^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$`)
-
-func IsValidEmailSyntax(email string) (bool, string) {
+func NormalizeEmailAddress(email string) (ok bool, cleanEmail, cleanUser, cleanDomain string) {
 	normalizedEmail := convertToAscii(email)
 
 	if !isValidEmailFormat(normalizedEmail) {
-		return false, ""
+		return false, "", "", ""
 	}
 
-	username, domain, ok := splitEmail(normalizedEmail)
+	username, domain, ok := parseUserAndDomain(normalizedEmail)
 	if !ok {
-		return false, ""
+		return false, "", "", ""
 	}
 
-	return isValidUsername(username) && isValidDomain(domain), normalizedEmail
-}
+	isValid := isValidUsername(username) && isValidDomain(domain)
 
-func GetEmailUserAndDomain(email string) (string, string, bool) {
-	if strings.TrimSpace(email) != email {
-		return "", "", false
-	}
-	user, domain, ok := splitEmail(email)
-	if !isValidUsername(user) || !isValidDomain(domain) {
-		return "", "", false
-	}
-
-	return user, domain, ok
+	return isValid, normalizedEmail, username, domain
 }
 
 func isValidEmailFormat(email string) bool {
 	return strings.TrimSpace(email) == email && email != ""
 }
 
-func splitEmail(email string) (string, string, bool) {
+func parseUserAndDomain(email string) (string, string, bool) {
 	parts := strings.Split(email, "@")
 	if len(parts) != 2 {
 		return "", "", false

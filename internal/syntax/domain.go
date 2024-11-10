@@ -80,7 +80,7 @@ func isValidDomain(domain string) bool {
 	domainParts := strings.Split(domain, ".")
 
 	// A valid domain must have at least 2 parts
-	if len(domainParts) < 2 {
+	if len(domainParts) < 2 || len(domainParts) > 5 {
 		return false
 	}
 
@@ -89,12 +89,6 @@ func isValidDomain(domain string) bool {
 		if len(part) == 0 || len(part) > 63 {
 			return false
 		}
-	}
-
-	// Check if the domain matches the regex pattern
-	if !domainRegex.MatchString(domain) {
-		fmt.Println("here2")
-		return false
 	}
 
 	// Extract the TLD using the public suffix list
