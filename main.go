@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/customeros/mailsherpa/cli"
 	"github.com/customeros/mailsherpa/domaincheck"
-	"github.com/customeros/mailsherpa/internal/cmd"
 )
 
 func main() {
@@ -18,22 +18,22 @@ func main() {
 			fmt.Println("Usage: mailsherpa domain <domain>")
 			return
 		}
-		cmd.VerifyDomain(args[1], true)
+		cli.VerifyDomain(args[1], true)
 	case "syntax":
 		if len(args) != 2 {
 			fmt.Println("Usage: mailsherpa syntax <email>")
 			return
 		}
-		cmd.VerifySyntax(args[1], true)
+		cli.VerifySyntax(args[1], true)
 	case "redirect":
 		fmt.Println(domaincheck.PrimaryDomainCheck(args[1]))
 	case "version":
-		cmd.Version()
+		cli.Version()
 	default:
 		if len(args) < 1 {
-			cmd.PrintUsage()
+			cli.PrintUsage()
 			return
 		}
-		cmd.VerifyEmail(args[0])
+		cli.VerifyEmail(args[0])
 	}
 }

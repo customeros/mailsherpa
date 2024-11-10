@@ -1,10 +1,12 @@
-package run
+package cli
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/customeros/mailsherpa/internal/dns"
+	"github.com/customeros/mailsherpa/domaincheck"
+	"github.com/customeros/mailsherpa/internal/syntax"
+	"github.com/customeros/mailsherpa/internal/util"
 	"github.com/customeros/mailsherpa/mailvalidate"
 )
 
@@ -33,19 +35,20 @@ type VerifyEmailRisk struct {
 }
 
 func BuildRequest(email string) mailvalidate.EmailValidationRequest {
-	firstname, lastname := mailvalidate.GenerateNames()
-	fromDomain, exists := os.LookupEnv("MAIL_SERVER_DOMAIN")
-	if !exists {
-		fmt.Println("MAIL_SERVER_DOMAIN environment variable not set")
+	fromEmail, fromDomain := util.GenerateSenderEmail()
+
+	ok, cleanEmail, _, domain := syntax.NormalizeEmailAddress(email)
+	if !ok {
+		fmt.Println("Invalid email address")
 		os.Exit(1)
 	}
 
-	dnsFromEmail := dns.GetDNS(email)
+	dnsFromEmail := domaincheck.CheckDNS(domain)
 	request := mailvalidate.EmailValidationRequest{
-		Email:            email,
+		Email:            cleanEmail,
 		FromDomain:       fromDomain,
-		FromEmail:        fmt.Sprintf("%s.%s@%s", firstname, lastname, fromDomain),
-		CatchAllTestUser: mailvalidate.GenerateCatchAllUsername(),
+		FromEmail:        fromEmail,
+		CatchAllTestUser: util.GenerateCatchAllUsername(),
 		Dns:              &dnsFromEmail,
 	}
 	return request
@@ -69,6 +72,11 @@ func BuildResponse(
 
 	if domain.IsCatchAll {
 		email.IsDeliverable = "unknown"
+	}
+
+	if syntax.IsSystemGenerated {
+		email.IsDeliverable = "false"
+		isRisky = true
 	}
 
 	risk := VerifyEmailRisk{
