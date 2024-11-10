@@ -19,51 +19,6 @@ type DNS struct {
 	Errors []string
 }
 
-func PrimaryDomainCheck(domain string) (bool, string) {
-	var expanded bool
-	domain, expanded = expandShortURL(domain)
-
-	// Parse domain into root and subdomain
-	root, subdomain, err := syntax.ParseRootAndSubdomain(domain)
-	if err != nil {
-		root = domain
-	}
-
-	// Exclude known exceptions
-	if root == "linktr.ee" {
-		return false, ""
-	}
-
-	// Check if domain is accessible
-	if !checkConnection(root) {
-		return false, ""
-	}
-
-	// Check for redirects
-	hasRedirect, primaryDomain := DomainRedirectCheck(root)
-
-	// Get DNS information
-	dnsInfo := CheckDNS(root)
-
-	// Check if domain is a primary domain
-	isPrimaryDomain := !hasRedirect &&
-		dnsInfo.CNAME == "" &&
-		len(dnsInfo.MX) > 0 &&
-		dnsInfo.HasA
-
-	if isPrimaryDomain {
-		// If no subdomain and domain wasn't expanded from a shortener,
-		// it's a valid primary domain
-		if subdomain == "" && !expanded {
-			return true, ""
-		}
-		// Otherwise, return the root domain
-		return false, root
-	}
-
-	return false, primaryDomain
-}
-
 func CheckDNS(domain string) DNS {
 	var dns DNS
 	var mxErr, spfErr error
@@ -137,6 +92,51 @@ func DomainRedirectCheck(domain string) (bool, string) {
 
 	// No valid redirects found
 	return false, ""
+}
+
+func PrimaryDomainCheck(domain string) (bool, string) {
+	var expanded bool
+	domain, expanded = expandShortURL(domain)
+
+	// Parse domain into root and subdomain
+	root, subdomain, err := syntax.ParseRootAndSubdomain(domain)
+	if err != nil {
+		root = domain
+	}
+
+	// Exclude known exceptions
+	if root == "linktr.ee" {
+		return false, ""
+	}
+
+	// Check if domain is accessible
+	if !checkConnection(root) {
+		return false, ""
+	}
+
+	// Check for redirects
+	hasRedirect, primaryDomain := DomainRedirectCheck(root)
+
+	// Get DNS information
+	dnsInfo := CheckDNS(root)
+
+	// Check if domain is a primary domain
+	isPrimaryDomain := !hasRedirect &&
+		dnsInfo.CNAME == "" &&
+		len(dnsInfo.MX) > 0 &&
+		dnsInfo.HasA
+
+	if isPrimaryDomain {
+		// If no subdomain and domain wasn't expanded from a shortener,
+		// it's a valid primary domain
+		if subdomain == "" && !expanded {
+			return true, ""
+		}
+		// Otherwise, return the root domain
+		return false, root
+	}
+
+	return false, primaryDomain
 }
 
 func checkConnection(domain string) bool {

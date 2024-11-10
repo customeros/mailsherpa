@@ -1,4 +1,4 @@
-package dns
+package emailproviders
 
 import (
 	"log"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/customeros/mailsherpa/domaincheck"
 	"github.com/customeros/mailsherpa/internal/syntax"
+	"github.com/customeros/mailsherpa/internal/util"
 )
 
 type AuthorizedSenders struct {
@@ -53,19 +54,10 @@ func processIncludes(spfRecord string, knownProviders *KnownProviders) Authorize
 		providerName, category := knownProviders.GetProviderByDomain(includeDomain)
 		if providerName != "" {
 			if slice, exists := categoryMap[category]; exists {
-				appendIfNotExists(slice, providerName)
+				util.AppendIfNotExists(slice, providerName)
 			}
 		}
 	}
 
 	return senders
-}
-
-func appendIfNotExists(slice *[]string, s string) {
-	for _, v := range *slice {
-		if v == s {
-			return
-		}
-	}
-	*slice = append(*slice, s)
 }

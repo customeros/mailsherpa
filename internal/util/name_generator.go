@@ -1,4 +1,4 @@
-package mailvalidate
+package util
 
 import (
 	"math/rand"

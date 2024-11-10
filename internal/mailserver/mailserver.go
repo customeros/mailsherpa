@@ -26,15 +26,10 @@ type SMPTValidation struct {
 func VerifyEmailAddress(email, fromDomain, fromEmail string, dnsRecords domaincheck.DNS) SMPTValidation {
 	results := SMPTValidation{}
 
+	// Has MX Record Check
 	if len(dnsRecords.MX) == 0 {
 		results.CanConnectSmtp = false
 		results.Description = "No MX records for domain"
-		if dnsRecords.SPF != "" {
-			results.Description += fmt.Sprintf(". SPF record: %s", dnsRecords.SPF)
-		}
-		if len(dnsRecords.Errors) > 0 {
-			results.Description += fmt.Sprintf(". Errors: %s", strings.Join(dnsRecords.Errors, ", "))
-		}
 		return results
 	}
 
