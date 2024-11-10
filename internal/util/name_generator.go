@@ -1,7 +1,9 @@
 package util
 
 import (
+	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -70,4 +72,16 @@ func GenerateCatchAllUsername() string {
 	}
 	name := codename.Generate(rng, 0)
 	return strings.ReplaceAll(name, "-", "")
+}
+
+func GenerateSenderEmail() (string, string) {
+	firstname, lastname := GenerateNames()
+	fromDomain, exists := os.LookupEnv("MAIL_SERVER_DOMAIN")
+	if !exists {
+		fmt.Println("MAIL_SERVER_DOMAIN environment variable not set")
+		os.Exit(1)
+	}
+
+	email := fmt.Sprintf("%s.%s@%s", firstname, lastname, fromDomain)
+	return email, fromDomain
 }

@@ -1,10 +1,9 @@
-package cmd
+package cli
 
 import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/customeros/mailsherpa/internal/run"
 	"github.com/customeros/mailsherpa/mailvalidate"
 )
 
@@ -20,7 +19,7 @@ func PrintUsage() {
 }
 
 func VerifyDomain(domain string, printResults bool) mailvalidate.DomainValidation {
-	request := run.BuildRequest(fmt.Sprintf("user@%s", domain))
+	request := BuildRequest(fmt.Sprintf("user@%s", domain))
 	domainResults := mailvalidate.ValidateDomain(request)
 	if domainResults.Error != "" {
 		fmt.Println(domainResults.Error)
@@ -42,15 +41,21 @@ func VerifySyntax(email string, printResults bool) mailvalidate.SyntaxValidation
 }
 
 func VerifyEmail(email string) {
-	request := run.BuildRequest(email)
+	request := BuildRequest(email)
 	syntaxResults := VerifySyntax(email, false)
 	domainResults := VerifyDomain(syntaxResults.Domain, false)
+
+	var domainValdation mailvalidate.DomainValidationParams
+	domainValdation.PrimaryDomain = domainResults.PrimaryDomain
+	domainValdation.IsPrimaryDomain = domainResults.IsPrimaryDomain
+	request.DomainValidationParams = &domainValdation
+
 	emailResults := mailvalidate.ValidateEmail(request)
 	if emailResults.Error != "" {
 		fmt.Println(emailResults.Error)
 	}
 
-	response := run.BuildResponse(email, syntaxResults, domainResults, emailResults)
+	response := BuildResponse(email, syntaxResults, domainResults, emailResults)
 	printOutput(response)
 }
 
