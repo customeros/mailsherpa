@@ -14,7 +14,8 @@ func IsSystemGeneratedUser(username string) bool {
 	}
 
 	// Exclude human-like names
-	if isCommonNamePattern(username) || isHyphenatedName(username) {
+	if isCommonNamePattern(username) || isHyphenatedName(username) ||
+		isWithinName(username) {
 		return false
 	}
 
@@ -24,11 +25,36 @@ func IsSystemGeneratedUser(username string) bool {
 	}
 
 	// Check for usernames with high entropy or complex numeric patterns
-	if util.IsHighEntropyString(username) || util.IsNumericString(username) || hasMultipleNumericSegments(username) {
+	if util.IsHighEntropyString(username) || util.IsNumericString(username) ||
+		hasMultipleNumericSegments(username) ||
+		isPhoneNumber(username) {
 		return true
 	}
 
 	return false
+}
+
+// Detect phone numbers
+func isPhoneNumber(username string) bool {
+	phonePatterns := []*regexp.Regexp{
+		regexp.MustCompile(`^\+?\d{10,15}$`),             // International format
+		regexp.MustCompile(`^\(\d{3}\)\s?\d{3}-?\d{4}$`), // (123) 456-7890
+		regexp.MustCompile(`^\d{3}-?\d{3}-?\d{4}$`),      // 123-456-7890
+	}
+
+	for _, pattern := range phonePatterns {
+		if pattern.MatchString(username) {
+			return true
+		}
+	}
+	return false
+}
+
+// Check if a number is within a natural name
+func isWithinName(username string) bool {
+	// Check if the username follows a natural name pattern with numbers
+	naturalNamePattern := regexp.MustCompile(`^[a-zA-Z]+\d{1,3}[a-zA-Z]+$`)
+	return naturalNamePattern.MatchString(username)
 }
 
 // containsSystemGeneratedKeyword checks for common keywords in system-generated usernames
