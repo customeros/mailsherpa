@@ -7,84 +7,79 @@ import (
 	"github.com/customeros/mailsherpa/internal/util"
 )
 
+// IsSystemGeneratedUser checks if a given username is system-generated
 func IsSystemGeneratedUser(username string) bool {
-	if isCommonNamePattern(username) {
+	if username == "" {
 		return false
 	}
 
-	if util.IsNumericString(username) ||
-		isCommonSystemGeneratedPattern(username) ||
-		util.IsHighEntropyString(username) ||
-		isRandomAfterHyphen(username) ||
-		hasMulipleNumericSegments(username) {
+	// Exclude human-like names
+	if isCommonNamePattern(username) || isHyphenatedName(username) {
+		return false
+	}
+
+	// Direct pattern match for system-generated usernames
+	if containsSystemGeneratedKeyword(username) || matchesSystemGeneratedPattern(username) {
+		return true
+	}
+
+	// Check for usernames with high entropy or complex numeric patterns
+	if util.IsHighEntropyString(username) || util.IsNumericString(username) || hasMultipleNumericSegments(username) {
 		return true
 	}
 
 	return false
 }
 
-func isCommonNamePattern(username string) bool {
-	namePattern := regexp.MustCompile(`^[a-z]+\.[a-z]+\d{1,4}$`)
-	if namePattern.MatchString(username) && len(username) < 20 {
-		return true
+// containsSystemGeneratedKeyword checks for common keywords in system-generated usernames
+func containsSystemGeneratedKeyword(username string) bool {
+	username = strings.ToLower(username)
+
+	// Check for keywords in the username
+	keywords := []string{
+		"usr-", "noreply", "bounce", "system", "return", "unsub-", "ld-", "do-not-reply", "donotreply",
+	}
+
+	for _, keyword := range keywords {
+		if strings.Contains(username, keyword) {
+			return true
+		}
 	}
 	return false
 }
 
-func isCommonSystemGeneratedPattern(username string) bool {
-	systemPatterns := []*regexp.Regexp{
-		// ld- and usr- patterns
-		regexp.MustCompile(`^(ld|usr)-[a-z0-9]{8,}$`),
-		// Unsubscribe patterns
-		regexp.MustCompile(`^unsub-[a-f0-9]{8}`),
-		regexp.MustCompile(`^[0-9]+\.[a-z0-9]{30,}`),
-		// UUID patterns
-		regexp.MustCompile(`[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}`),
-		// System email prefixes
-		regexp.MustCompile(`^(bounce|return|system|noreply|no-reply|donotreply|do-not-reply|unsubscribe)[-.][a-z0-9]`),
-		// Common prefixes with random strings
-		regexp.MustCompile(`^(usr|user|tmp|temp|random)-[a-z0-9]{8,}$`),
+// matchesSystemGeneratedPattern checks for specific patterns indicating system-generated usernames
+func matchesSystemGeneratedPattern(username string) bool {
+	username = strings.ToLower(username)
+
+	patterns := []*regexp.Regexp{
+		// General system prefixes with alphanumeric suffixes
+		regexp.MustCompile(`^(usr|ld)-[a-z0-9]+$`),
+		regexp.MustCompile(`^(noreply|bounce|system|return)[._-]?[a-z0-9]+$`),
+
+		// UUID pattern
+		regexp.MustCompile(`^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$`),
+
+		// Specific unsubscribe pattern
+		regexp.MustCompile(`^unsub-[a-f0-9]{8}$`),
 	}
 
-	for _, pattern := range systemPatterns {
+	for _, pattern := range patterns {
 		if pattern.MatchString(username) {
 			return true
 		}
 	}
 
-	// Quick checks for obvious patterns
-	if strings.Count(username, "_") > 2 ||
-		strings.Contains(username, "=") ||
-		strings.Contains(username, "--") ||
-		len(username) >= 40 {
+	// Additional criteria for complex usernames that suggest system generation
+	if len(username) >= 40 || strings.Count(username, "_") > 2 || strings.Contains(username, "=") {
 		return true
 	}
+
 	return false
 }
 
-func isRandomAfterHyphen(username string) bool {
-	parts := strings.Split(username, "-")
-	if len(parts) == 2 && len(parts[1]) >= 8 {
-		return util.IsHighEntropyString(parts[1])
-	}
-	return false
-}
-
-func isValidUsername(username string) bool {
-	if len(username) > 64 {
-		return false
-	}
-
-	// Basic validation for allowed characters in email usernames
-	allowedChars := regexp.MustCompile(`^[a-zA-Z0-9.=_+!#$%&'*+/=?^_{|}~-]+$`)
-	if !allowedChars.MatchString(username) {
-		return false
-	}
-
-	return true
-}
-
-func hasMulipleNumericSegments(username string) bool {
+// hasMultipleNumericSegments checks for usernames with multiple numeric segments
+func hasMultipleNumericSegments(username string) bool {
 	segments := strings.Split(username, ".")
 	numericSegments := 0
 	for _, segment := range segments {
@@ -92,6 +87,39 @@ func hasMulipleNumericSegments(username string) bool {
 			numericSegments++
 		}
 	}
-
 	return numericSegments >= 3
+}
+
+// isCommonNamePattern checks if the username matches typical human naming patterns
+func isCommonNamePattern(username string) bool {
+	namePatterns := []*regexp.Regexp{
+		regexp.MustCompile(`^[a-z]+\.[a-z]+\d{0,4}$`),  // john.doe123
+		regexp.MustCompile(`^[a-z]+\.[a-z]\.[a-z]+$`),  // john.m.doe
+		regexp.MustCompile(`^[a-z]+\.[a-z]+\.[a-z]+$`), // john.michael.doe
+		regexp.MustCompile(`^[a-z]+[a-z0-9]{0,4}$`),    // johndoe, john123
+	}
+
+	username = strings.ToLower(username)
+	for _, pattern := range namePatterns {
+		if pattern.MatchString(username) && len(username) < 30 {
+			return true
+		}
+	}
+	return false
+}
+
+// isHyphenatedName checks if the username resembles a hyphenated name
+func isHyphenatedName(username string) bool {
+	namePattern := regexp.MustCompile(`^[a-z]+-[a-z]+$`)
+	return namePattern.MatchString(strings.ToLower(username))
+}
+
+// isValidUsername checks basic validation for allowed characters in email usernames
+func isValidUsername(username string) bool {
+	if len(username) > 64 {
+		return false
+	}
+
+	allowedChars := regexp.MustCompile(`^[a-zA-Z0-9.=_+!#$%&'*+/=?^_{|}~-]+$`)
+	return allowedChars.MatchString(username)
 }

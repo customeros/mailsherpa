@@ -50,5 +50,5 @@ func convertToAscii(input string) string {
 		}
 	}
 
-	return string(ascii)
+	return strings.ToLower(string(ascii))
 }
