@@ -19,9 +19,9 @@ func TestValidateEmailSyntax(t *testing.T) {
 			email: "john.doe@gmail.com",
 			expected: mailvalidate.SyntaxValidation{
 				IsValid:           true,
-				User:              "john.doe",
+				User:              "johndoe",
 				Domain:            "gmail.com",
-				CleanEmail:        "john.doe@gmail.com",
+				CleanEmail:        "johndoe@gmail.com",
 				IsRoleAccount:     false,
 				IsFreeAccount:     true,
 				IsSystemGenerated: false,
@@ -85,9 +85,9 @@ func TestValidateEmailSyntax(t *testing.T) {
 			email: "Rob.Name😆@Gmail.com",
 			expected: mailvalidate.SyntaxValidation{
 				IsValid:           true,
-				User:              "rob.name",
+				User:              "robname",
 				Domain:            "gmail.com",
-				CleanEmail:        "rob.name@gmail.com",
+				CleanEmail:        "robname@gmail.com",
 				IsRoleAccount:     false,
 				IsFreeAccount:     true,
 				IsSystemGenerated: false,
