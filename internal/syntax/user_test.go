@@ -163,8 +163,12 @@ func TestSpecificSystemPatterns(t *testing.T) {
 		{"Return Pattern", "return.12345", true},
 		{"System Pattern", "system.12345", true},
 		{"No Reply Pattern", "noreply.12345", true},
+		{"No-Reply Pattern", "no-reply-wz2igrh6xmefeptmzkhu7a", true},
 		{"Do Not Reply Pattern", "donotreply.12345", true},
 		{"Random Prefix Pattern", "random-12345678", true},
+		//{"Short Random", "fu5au9", true},
+		{"Phone Number", "+14132193236", true},
+		{"Number in Middle", "lorenzo422sandoval", false},
 	}
 
 	for _, tp := range systemPatterns {

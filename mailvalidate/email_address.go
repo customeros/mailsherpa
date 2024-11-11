@@ -77,7 +77,9 @@ func ValidateEmail(validationRequest EmailValidationRequest) EmailValidation {
 	}
 
 	// Handle alternate email if needed
-	handleAlternateEmail(&validationRequest, &results)
+	if !results.IsFreeAccount {
+		handleAlternateEmail(&validationRequest, &results)
+	}
 
 	return results
 }
