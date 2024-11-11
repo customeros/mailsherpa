@@ -214,6 +214,7 @@ func handleTemporaryFailure(req *EmailValidationRequest, resp *EmailValidation) 
 }
 
 func handlePermanentFailure(req *EmailValidationRequest, resp *EmailValidation) {
+	fmt.Println(resp.SmtpResponse.Description)
 	switch {
 	case isMailboxFullError(resp.SmtpResponse.Description):
 		handleMailboxFull(resp)
@@ -247,26 +248,28 @@ func isInvalidAddressError(description string, errorCode string) bool {
 		}
 	}
 
+	lowerDesc := strings.ToLower(description)
+
 	invalidAddressKeywords := []string{
-		"Address does not exist", "Address Error", "Address not",
-		"Address unknown", "Bad address syntax", "can't verify",
+		"address does not exist", "address error", "address not",
+		"address unknown", "bad address syntax", "can't verify",
 		"cannot deliver mail", "could not deliver mail",
-		"Disabled recipient", "dosn't exist", "DOES NOT EXIST",
-		"Invalid address", "Invalid Recipient", "Mailbox does not exist",
-		"Mailbox is frozen", "Mailbox not found", "mailbox unavailable",
+		"disabled recipient", "dosn't exist", "does not exist",
+		"invalid address", "invalid recipient",
+		"mailbox is frozen", "mailbox not found", "mailbox unavailable",
 		"no longer being monitored", "no mail box", "no mailbox",
-		"no such", "Not allowed", "not a known user", "not exist",
-		"not found", "not valid", "Recipient not found",
-		"Recipient unknown", "refused", "rejected", "Relay access",
-		"Relay not", "Service not available", "unable to find",
-		"Unknown recipient", "Unknown user", "unmonitored inbox",
-		"Unroutable address", "user doesn't", "user invalid",
-		"User not", "User unknown", "verification problem",
-		"verify address failed", "We do not relay",
+		"no such", "not allowed", "not a known user", "not exist",
+		"not found", "not valid", "recipient not found",
+		"recipient unknown", "refused", "rejected", "relay access",
+		"relay not", "service not available", "unable to find",
+		"unknown recipient", "unknown user", "unmonitored inbox",
+		"unroutable address", "user doesn't", "user invalid",
+		"user not", "user unknown", "verification problem",
+		"verify address failed", "we do not relay",
 	}
 
 	for _, keyword := range invalidAddressKeywords {
-		if strings.Contains(description, keyword) {
+		if strings.Contains(lowerDesc, keyword) {
 			return true
 		}
 	}
@@ -276,28 +279,36 @@ func isInvalidAddressError(description string, errorCode string) bool {
 
 // isPermanentBlacklistError checks for permanent blacklist errors
 func isPermanentBlacklistError(description string) bool {
+	// Convert description to lowercase once for more efficient comparison
+	lowerDesc := strings.ToLower(description)
+
 	blacklistKeywords := []string{
-		"Access denied, banned sender",
-		"Access Denied",
+		"access denied",
 		"bad reputation",
 		"barracudanetworks.com/reputation",
 		"black list",
-		"Blocked",
+		"blacklist",
 		"blocked",
+		"blocked by rbl",
+		"client host blocked",
 		"envelope blocked",
-		"ERS-DUL",
-		"Listed by PBL",
-		"rejected by Abusix blacklist",
+		"ers-dul",
+		"listed by pbl",
+		"rejected by abusix",
 		"sender rejected",
 		"spf check failed",
-		"Transaction failed",
+		"transaction failed",
+		"spamhaus",
+		"rbl",
+		"pbl",
 	}
 
 	for _, keyword := range blacklistKeywords {
-		if strings.Contains(description, keyword) {
+		if strings.Contains(lowerDesc, keyword) {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -337,20 +348,55 @@ func isDeliveryFailure(description string, errorCode string) bool {
 		errorCode == "4.2.2"
 }
 
+// isGreylistError checks if the response indicates greylisting
 func isGreylistError(description string) bool {
-	return strings.Contains(description, "greylisted") ||
-		strings.Contains(description, "Greylisted") ||
-		strings.Contains(description, "Greylisting") ||
-		strings.Contains(description, "please retry later")
+	greylistKeywords := []string{
+		"greylisted",
+		"Greylisted",
+		"Greylisting",
+		"please retry later",
+		"try again later",
+		"temporarily deferred",
+		"postgrey",
+		"try again in", // Common in greylisting messages
+		"deferred for", // Some servers use this format
+	}
+
+	for _, keyword := range greylistKeywords {
+		if strings.Contains(strings.ToLower(description), strings.ToLower(keyword)) {
+			return true
+		}
+	}
+	return false
 }
 
 func isTLSError(description string) bool {
 	return strings.Contains(description, "TLS")
 }
 
+// isBlacklistError checks for blacklist-related errors
 func isBlacklistError(description string) bool {
-	return strings.Contains(description, "not in whitelist") ||
-		strings.Contains(description, "Sender address rejected")
+	blacklistKeywords := []string{
+		"not in whitelist",
+		"Sender address rejected",
+		"blocked by RBL",
+		"Listed by PBL",
+		"spamhaus",
+		"blacklist",
+		"blocklist",
+		"reputation",
+		"blocked for spam",
+		"blocked by",
+		"client host blocked",
+		"IP blocked",
+	}
+
+	for _, keyword := range blacklistKeywords {
+		if strings.Contains(strings.ToLower(description), strings.ToLower(keyword)) {
+			return true
+		}
+	}
+	return false
 }
 
 // Handler implementations
@@ -370,7 +416,6 @@ func handleTLSRequirement(resp *EmailValidation) {
 	resp.RetryValidation = true
 }
 
-// Blacklist and greylist handlers remain mostly unchanged but with better error handling
 func blacklisted(req *EmailValidationRequest, resp *EmailValidation) {
 	resp.MailServerHealth.IsBlacklisted = true
 	if ip, err := ipify.GetIp(); err != nil {
