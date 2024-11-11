@@ -1,6 +1,7 @@
 package syntax
 
 import (
+	"fmt"
 	"strings"
 	"unicode"
 
@@ -22,6 +23,12 @@ func NormalizeEmailAddress(email string) (ok bool, cleanEmail, cleanUser, cleanD
 	}
 
 	isValid := isValidUsername(username) && isValidDomain(domain)
+
+	if domain == "gmail.com" || domain == "googlemail.com" {
+		username = strings.ReplaceAll(username, ".", "")
+		domain = "gmail.com"
+		normalizedEmail = fmt.Sprintf("%s@%s", username, domain)
+	}
 
 	return isValid, normalizedEmail, username, domain
 }
