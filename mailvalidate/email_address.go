@@ -188,8 +188,9 @@ func isPermanentFailure(code string) bool {
 }
 
 func isNoMXRecordError(description string) bool {
-	return strings.Contains(description, "No MX records") ||
-		strings.Contains(description, "Cannot connect to any MX server")
+	desc := strings.ToLower(description)
+	return strings.Contains(desc, "no mx records") ||
+		strings.Contains(desc, "cannot connect to any mx server")
 }
 
 // Response handlers
@@ -314,12 +315,14 @@ func isPermanentBlacklistError(description string) bool {
 
 // isTemporaryBlockError checks if the response indicates a temporary block
 func isTemporaryBlockError(description string) bool {
-	return strings.Contains(description, "temporarily blocked")
+	desc := strings.ToLower(description)
+	return strings.Contains(desc, "temporarily blocked")
 }
 
 // isRetryableError checks if the error is retryable
 func isRetryableError(description string) bool {
-	return strings.Contains(description, "try again")
+	desc := strings.ToLower(description)
+	return strings.Contains(desc, "try again")
 }
 
 // handleInvalidAddress processes invalid address responses
@@ -336,14 +339,16 @@ func handleRetryableError(resp *EmailValidation) {
 
 // Error classification helpers
 func isMailboxFullError(description string) bool {
-	return strings.Contains(description, "Insufficient system storage") ||
-		strings.Contains(description, "out of storage") ||
-		strings.Contains(description, "user is over quota")
+	desc := strings.ToLower(description)
+	return strings.Contains(desc, "insufficient system storage") ||
+		strings.Contains(desc, "out of storage") ||
+		strings.Contains(desc, "user is over quota")
 }
 
 func isDeliveryFailure(description string, errorCode string) bool {
-	return strings.Contains(description, "Account inbounds disabled") ||
-		strings.Contains(description, "address rejected") ||
+	desc := strings.ToLower(description)
+	return strings.Contains(desc, "account inbounds disabled") ||
+		strings.Contains(desc, "address rejected") ||
 		errorCode == "4.4.4" ||
 		errorCode == "4.2.2"
 }
@@ -352,18 +357,17 @@ func isDeliveryFailure(description string, errorCode string) bool {
 func isGreylistError(description string) bool {
 	greylistKeywords := []string{
 		"greylisted",
-		"Greylisted",
-		"Greylisting",
+		"greylisting",
 		"please retry later",
 		"try again later",
 		"temporarily deferred",
 		"postgrey",
-		"try again in", // Common in greylisting messages
-		"deferred for", // Some servers use this format
+		"try again in",
+		"deferred for",
 	}
 
 	for _, keyword := range greylistKeywords {
-		if strings.Contains(strings.ToLower(description), strings.ToLower(keyword)) {
+		if strings.Contains(strings.ToLower(description), keyword) {
 			return true
 		}
 	}
@@ -371,16 +375,17 @@ func isGreylistError(description string) bool {
 }
 
 func isTLSError(description string) bool {
-	return strings.Contains(description, "TLS")
+	desc := strings.ToLower(description)
+	return strings.Contains(desc, "tls")
 }
 
 // isBlacklistError checks for blacklist-related errors
 func isBlacklistError(description string) bool {
 	blacklistKeywords := []string{
 		"not in whitelist",
-		"Sender address rejected",
-		"blocked by RBL",
-		"Listed by PBL",
+		"sender address rejected",
+		"blocked by rbl",
+		"listed by pbl",
 		"spamhaus",
 		"blacklist",
 		"blocklist",
@@ -388,11 +393,11 @@ func isBlacklistError(description string) bool {
 		"blocked for spam",
 		"blocked by",
 		"client host blocked",
-		"IP blocked",
+		"ip blocked",
 	}
 
 	for _, keyword := range blacklistKeywords {
-		if strings.Contains(strings.ToLower(description), strings.ToLower(keyword)) {
+		if strings.Contains(strings.ToLower(description), keyword) {
 			return true
 		}
 	}
