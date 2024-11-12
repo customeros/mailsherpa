@@ -6,6 +6,7 @@ import (
 
 	"github.com/customeros/mailsherpa/cli"
 	"github.com/customeros/mailsherpa/domaincheck"
+	"github.com/customeros/mailsherpa/emailparser"
 )
 
 func main() {
@@ -27,6 +28,8 @@ func main() {
 		cli.VerifySyntax(args[1], true)
 	case "redirect":
 		fmt.Println(domaincheck.PrimaryDomainCheck(args[1]))
+	case "parse":
+		fmt.Println(emailparser.Parse(args[1]))
 	case "version":
 		cli.Version()
 	default:
