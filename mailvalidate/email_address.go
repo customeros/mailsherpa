@@ -215,23 +215,22 @@ func handleTemporaryFailure(req *EmailValidationRequest, resp *EmailValidation) 
 }
 
 func handlePermanentFailure(req *EmailValidationRequest, resp *EmailValidation) {
-	fmt.Println(resp.SmtpResponse.Description)
 	switch {
-	case isMailboxFullError(resp.SmtpResponse.Description):
-		handleMailboxFull(resp)
-	case isInvalidAddressError(resp.SmtpResponse.Description, resp.SmtpResponse.ErrorCode):
-		handleInvalidAddress(resp)
 	case isPermanentBlacklistError(resp.SmtpResponse.Description):
 		blacklisted(req, resp)
 	case isTemporaryBlockError(resp.SmtpResponse.Description):
 		greylisted(req, resp)
+	case isMailboxFullError(resp.SmtpResponse.Description):
+		handleMailboxFull(resp)
 	case isTLSError(resp.SmtpResponse.Description):
 		handleTLSRequirement(resp)
 	case isRetryableError(resp.SmtpResponse.Description):
 		handleRetryableError(resp)
+	case isInvalidAddressError(resp.SmtpResponse.Description, resp.SmtpResponse.ErrorCode):
+		handleInvalidAddress(resp)
 	default:
-		// For unhandled permanent failures, mark as undeliverable
-		resp.IsDeliverable = "false"
+		// For unhandled permanent failures, mark as unknown
+		resp.IsDeliverable = "unknown"
 		resp.RetryValidation = false
 	}
 }

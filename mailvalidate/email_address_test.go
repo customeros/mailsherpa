@@ -1,6 +1,7 @@
 package mailvalidate
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -452,6 +453,240 @@ func TestIsDeliveryFailure(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := isDeliveryFailure(tt.description, tt.errorCode)
 			assert.Equal(t, tt.want, got, "isDeliveryFailure() returned unexpected result")
+		})
+	}
+}
+
+func TestMailServerHealthIntegration(t *testing.T) {
+	tests := []struct {
+		name     string
+		req      *EmailValidationRequest
+		resp     *EmailValidation
+		expected MailServerHealth
+	}{
+		{
+			name: "should handle greylisting",
+			req: &EmailValidationRequest{
+				Email:      "test@example.com",
+				FromEmail:  "sender@test.com",
+				FromDomain: "test.com",
+			},
+			resp: &EmailValidation{
+				IsDeliverable:   "unknown",
+				RetryValidation: true,
+				SmtpResponse: SmtpResponse{
+					ResponseCode: "451",
+					Description:  "Greylisted, please try again in 5 minutes",
+				},
+			},
+			expected: MailServerHealth{
+				IsGreylisted:  true,
+				IsBlacklisted: false,
+				FromEmail:     "sender@test.com",
+				RetryAfter:    0, // We'll check this is greater than current time
+			},
+		},
+		{
+			name: "should handle temporary blacklisting",
+			req: &EmailValidationRequest{
+				Email:      "test@example.com",
+				FromEmail:  "sender@test.com",
+				FromDomain: "test.com",
+			},
+			resp: &EmailValidation{
+				IsDeliverable:   "unknown",
+				RetryValidation: true,
+				SmtpResponse: SmtpResponse{
+					ResponseCode: "451",
+					Description:  "Your IP is listed in Spamhaus",
+				},
+			},
+			expected: MailServerHealth{
+				IsGreylisted:  false,
+				IsBlacklisted: true,
+				FromEmail:     "sender@test.com",
+			},
+		},
+		{
+			name: "should handle permanent blacklisting",
+			req: &EmailValidationRequest{
+				Email:      "test@example.com",
+				FromEmail:  "sender@test.com",
+				FromDomain: "test.com",
+			},
+			resp: &EmailValidation{
+				IsDeliverable:   "unknown",
+				RetryValidation: true,
+				SmtpResponse: SmtpResponse{
+					ResponseCode: "554",
+					Description:  "Blocked by RBL - bad reputation",
+				},
+			},
+			expected: MailServerHealth{
+				IsGreylisted:  false,
+				IsBlacklisted: true,
+				FromEmail:     "sender@test.com",
+			},
+		},
+		{
+			name: "should handle spamhaus blacklisting",
+			req: &EmailValidationRequest{
+				Email:      "test@example.com",
+				FromEmail:  "sender@test.com",
+				FromDomain: "test.com",
+			},
+			resp: &EmailValidation{
+				IsDeliverable:   "unknown",
+				RetryValidation: true,
+				SmtpResponse: SmtpResponse{
+					ResponseCode: "550",
+					Description:  "Service unavailable, Client host [12.239.49.209] blocked using Spamhaus.",
+				},
+			},
+			expected: MailServerHealth{
+				IsGreylisted:  false,
+				IsBlacklisted: true,
+				FromEmail:     "sender@test.com",
+			},
+		},
+		{
+			name: "should handle postgrey delay",
+			req: &EmailValidationRequest{
+				Email:      "test@example.com",
+				FromEmail:  "sender@test.com",
+				FromDomain: "test.com",
+			},
+			resp: &EmailValidation{
+				IsDeliverable:   "unknown",
+				RetryValidation: true,
+				SmtpResponse: SmtpResponse{
+					ResponseCode: "451",
+					Description:  "Postgrey in action, retry in 60 seconds",
+				},
+			},
+			expected: MailServerHealth{
+				IsGreylisted:  true,
+				IsBlacklisted: false,
+				FromEmail:     "sender@test.com",
+				RetryAfter:    0, // We'll check this is about 2 minutes in future
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup initial time for comparison
+			startTime := time.Now().Unix()
+
+			// Process the response
+			handleSmtpResponses(tt.req, tt.resp)
+
+			// Verify MailServerHealth fields
+			assert.Equal(t, tt.expected.IsGreylisted, tt.resp.MailServerHealth.IsGreylisted,
+				"IsGreylisted mismatch")
+			assert.Equal(t, tt.expected.IsBlacklisted, tt.resp.MailServerHealth.IsBlacklisted,
+				"IsBlacklisted mismatch")
+			assert.Equal(t, tt.expected.FromEmail, tt.resp.MailServerHealth.FromEmail,
+				"FromEmail mismatch")
+
+			// For greylisted cases, verify RetryAfter timing
+			if tt.resp.MailServerHealth.IsGreylisted {
+				assert.Greater(t, tt.resp.MailServerHealth.RetryAfter, int(startTime),
+					"RetryAfter should be in the future")
+
+				// Check specific delay windows
+				delayInSeconds := tt.resp.MailServerHealth.RetryAfter - int(startTime)
+
+				if strings.Contains(tt.resp.SmtpResponse.Description, "60 seconds") {
+					// For 60 seconds message, expect ~2 minute delay (allowing 1 second tolerance)
+					assert.InDelta(t, 120, delayInSeconds, 1.0,
+						"RetryAfter should be about 2 minutes in the future")
+				} else if strings.Contains(tt.resp.SmtpResponse.Description, "5 minutes") {
+					// For 5 minutes message, expect ~6 minute delay (allowing 1 second tolerance)
+					assert.InDelta(t, 360, delayInSeconds, 1.0,
+						"RetryAfter should be about 6 minutes in the future")
+				}
+			}
+
+			// For blacklisted cases, verify ServerIP is set
+			if tt.resp.MailServerHealth.IsBlacklisted {
+				assert.NotEmpty(t, tt.resp.MailServerHealth.ServerIP,
+					"ServerIP should be set for blacklisted cases")
+			}
+		})
+	}
+}
+
+func TestMaillServerHealthEdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		req      *EmailValidationRequest
+		resp     *EmailValidation
+		expected MailServerHealth
+	}{
+		{
+			name: "should handle missing FromEmail",
+			req: &EmailValidationRequest{
+				Email:      "test@example.com",
+				FromDomain: "test.com",
+			},
+			resp: &EmailValidation{
+				IsDeliverable:   "unknown",
+				RetryValidation: true,
+				SmtpResponse: SmtpResponse{
+					ResponseCode: "451",
+					Description:  "Greylisted, please try again in 5 minutes",
+				},
+			},
+			expected: MailServerHealth{
+				IsGreylisted:  true,
+				IsBlacklisted: false,
+				FromEmail:     "",
+			},
+		},
+		{
+			name: "should handle unknown greylist delay format",
+			req: &EmailValidationRequest{
+				Email:      "test@example.com",
+				FromEmail:  "sender@test.com",
+				FromDomain: "test.com",
+			},
+			resp: &EmailValidation{
+				IsDeliverable:   "unknown",
+				RetryValidation: true,
+				SmtpResponse: SmtpResponse{
+					ResponseCode: "451",
+					Description:  "Greylisted, please wait a while",
+				},
+			},
+			expected: MailServerHealth{
+				IsGreylisted:  true,
+				IsBlacklisted: false,
+				FromEmail:     "sender@test.com",
+				RetryAfter:    0, // Should use default delay
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			startTime := time.Now().Unix()
+
+			handleSmtpResponses(tt.req, tt.resp)
+
+			assert.Equal(t, tt.expected.IsGreylisted, tt.resp.MailServerHealth.IsGreylisted)
+			assert.Equal(t, tt.expected.IsBlacklisted, tt.resp.MailServerHealth.IsBlacklisted)
+			assert.Equal(t, tt.expected.FromEmail, tt.resp.MailServerHealth.FromEmail)
+
+			if tt.resp.MailServerHealth.IsGreylisted {
+				assert.Greater(t, tt.resp.MailServerHealth.RetryAfter, int(startTime))
+
+				if strings.Contains(tt.resp.SmtpResponse.Description, "wait a while") {
+					// Check that default delay of 75 minutes is used
+					delayInSeconds := tt.resp.MailServerHealth.RetryAfter - int(startTime)
+					assert.InDelta(t, 75*60, delayInSeconds, 1.0)
+				}
+			}
 		})
 	}
 }
