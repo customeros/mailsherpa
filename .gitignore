@@ -28,5 +28,4 @@ go.work.sum
 .idea/
 mailsherpa-*
 *.csv
-*.txt
 validation_checkpoint.json
