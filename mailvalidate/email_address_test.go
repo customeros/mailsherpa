@@ -487,6 +487,28 @@ func TestMailServerHealthIntegration(t *testing.T) {
 			},
 		},
 		{
+			name: "should handle mimecast greylisting",
+			req: &EmailValidationRequest{
+				Email:      "test@example.com",
+				FromEmail:  "sender@test.com",
+				FromDomain: "test.com",
+			},
+			resp: &EmailValidation{
+				IsDeliverable:   "unknown",
+				RetryValidation: true,
+				SmtpResponse: SmtpResponse{
+					ResponseCode: "451",
+					Description:  "Internal resource temporarily unavailable - https://community.mimecast.com/docs/DOC-1369#451",
+				},
+			},
+			expected: MailServerHealth{
+				IsGreylisted:  true,
+				IsBlacklisted: false,
+				FromEmail:     "sender@test.com",
+				RetryAfter:    0, // We'll check this is greater than current time
+			},
+		},
+		{
 			name: "should handle temporary blacklisting",
 			req: &EmailValidationRequest{
 				Email:      "test@example.com",

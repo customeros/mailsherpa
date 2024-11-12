@@ -201,16 +201,16 @@ func handleDeliverableResponse(resp *EmailValidation) {
 
 func handleTemporaryFailure(req *EmailValidationRequest, resp *EmailValidation) {
 	switch {
+	case isBlacklistError(resp.SmtpResponse.Description):
+		blacklisted(req, resp)
+	case isGreylistError(resp.SmtpResponse.Description):
+		greylisted(req, resp)
 	case isMailboxFullError(resp.SmtpResponse.Description):
 		handleMailboxFull(resp)
 	case isDeliveryFailure(resp.SmtpResponse.Description, resp.SmtpResponse.ErrorCode):
 		handleDeliveryFailure(resp)
-	case isGreylistError(resp.SmtpResponse.Description):
-		greylisted(req, resp)
 	case isTLSError(resp.SmtpResponse.Description):
 		handleTLSRequirement(resp)
-	case isBlacklistError(resp.SmtpResponse.Description):
-		blacklisted(req, resp)
 	}
 }
 
@@ -363,6 +363,7 @@ func isGreylistError(description string) bool {
 		"postgrey",
 		"try again in",
 		"deferred for",
+		"internal resource temporarily unavailable",
 	}
 
 	for _, keyword := range greylistKeywords {
