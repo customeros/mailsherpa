@@ -3,8 +3,9 @@ package mailvalidate_test
 import (
 	"testing"
 
-	"github.com/customeros/mailsherpa/mailvalidate"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/customeros/mailsherpa/mailvalidate"
 )
 
 func TestValidateEmailSyntax(t *testing.T) {
@@ -79,6 +80,21 @@ func TestValidateEmailSyntax(t *testing.T) {
 			email:       "not.an.email@",
 			expected:    mailvalidate.SyntaxValidation{},
 			description: "Invalid email should return empty validation struct",
+		},
+		{
+			name:  "Underscore Username",
+			email: "bob_smith@google.com",
+			expected: mailvalidate.SyntaxValidation{
+				IsValid:           true,
+				User:              "bob_smith",
+				Domain:            "google.com",
+				CleanEmail:        "bob_smith@google.com",
+				IsRoleAccount:     false,
+				IsFreeAccount:     false,
+				IsSystemGenerated: false,
+				Error:             "",
+			},
+			description: "Underscores in username should be supported",
 		},
 		{
 			name:  "Mixed Case with Emoji Email",

@@ -120,6 +120,7 @@ func hasMultipleNumericSegments(username string) bool {
 func isCommonNamePattern(username string) bool {
 	namePatterns := []*regexp.Regexp{
 		regexp.MustCompile(`^[a-z]+\.[a-z]+\d{0,4}$`),  // john.doe123
+		regexp.MustCompile(`^[a-z]+\_[a-z]+\d{0,4}$`),  // john.doe123
 		regexp.MustCompile(`^[a-z]+\.[a-z]\.[a-z]+$`),  // john.m.doe
 		regexp.MustCompile(`^[a-z]+\.[a-z]+\.[a-z]+$`), // john.michael.doe
 		regexp.MustCompile(`^[a-z]+[a-z0-9]{0,4}$`),    // johndoe, john123
