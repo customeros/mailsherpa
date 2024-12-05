@@ -194,7 +194,7 @@ func TestPrimaryDomainCheck(t *testing.T) {
 			name:           "Google - Primary Domain",
 			domain:         "google.com",
 			isPrimary:      true,
-			expectedDomain: "",
+			expectedDomain: "google.com",
 			description:    "Google.com is a primary domain with MX records and A records",
 		},
 		{
@@ -243,7 +243,7 @@ func TestPrimaryDomainCheck(t *testing.T) {
 			name:           "Microsoft - Primary Domain",
 			domain:         "microsoft.com",
 			isPrimary:      true,
-			expectedDomain: "",
+			expectedDomain: "microsoft.com",
 			description:    "Microsoft.com is a primary domain",
 		},
 		{
