@@ -130,7 +130,7 @@ func PrimaryDomainCheck(domain string) (bool, string) {
 		// If no subdomain and domain wasn't expanded from a shortener,
 		// it's a valid primary domain
 		if subdomain == "" && !expanded {
-			return true, ""
+			return true, domain
 		}
 		// Otherwise, return the root domain
 		return false, root
