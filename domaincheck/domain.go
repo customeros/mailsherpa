@@ -42,10 +42,7 @@ func CheckDNS(domain string) DNS {
 }
 
 func DomainRedirectCheck(domain string) (bool, string) {
-	// Clean up the domain input
-	domain = strings.TrimPrefix(domain, "http://")
-	domain = strings.TrimPrefix(domain, "https://")
-	domain = strings.TrimSpace(domain)
+	domain = cleanDomain(domain)
 
 	// Initialize final redirect location
 	var finalLoc string
@@ -98,6 +95,8 @@ func PrimaryDomainCheck(domain string) (bool, string) {
 	var expanded bool
 	domain, expanded = expandShortURL(domain)
 
+	domain = cleanDomain(domain)
+
 	// Parse domain into root and subdomain
 	root, subdomain, err := syntax.ParseRootAndSubdomain(domain)
 	if err != nil {
@@ -137,6 +136,15 @@ func PrimaryDomainCheck(domain string) (bool, string) {
 	}
 
 	return false, primaryDomain
+}
+
+func cleanDomain(domain string) string {
+
+	domain = strings.TrimPrefix(domain, "http://")
+	domain = strings.TrimPrefix(domain, "https://")
+	domain = strings.Trim(domain, "/")
+	domain = strings.TrimSpace(domain)
+	return domain
 }
 
 func checkConnection(domain string) bool {
