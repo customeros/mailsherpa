@@ -192,7 +192,7 @@ func TestPrimaryDomainCheck(t *testing.T) {
 	}{
 		{
 			name:           "Google - Primary Domain",
-			domain:         "google.com",
+			domain:         "  google.com  ",
 			isPrimary:      true,
 			expectedDomain: "google.com",
 			description:    "Google.com is a primary domain with MX records and A records",
@@ -293,11 +293,6 @@ func TestPrimaryDomainCheckWithErrors(t *testing.T) {
 			name:        "Invalid domain characters",
 			domain:      "domain with spaces.com",
 			description: "Invalid domain should return false with no primary domain",
-		},
-		{
-			name:        "Domain with trailing spaces",
-			domain:      "  google.com  ",
-			description: "Domain with whitespace should be handled correctly",
 		},
 		{
 			name:        "Very long domain",
