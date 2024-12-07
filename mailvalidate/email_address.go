@@ -156,11 +156,8 @@ func handleAlternateEmail(req *EmailValidationRequest, results *EmailValidation)
 
 // handleSmtpResponses processes SMTP response codes and descriptions
 func handleSmtpResponses(req *EmailValidationRequest, resp *EmailValidation) {
-	resp.RetryValidation = true
-
 	if isNoMXRecordError(resp.SmtpResponse.Description) {
 		resp.IsDeliverable = "false"
-		resp.RetryValidation = false
 		return
 	}
 
@@ -204,6 +201,7 @@ func handleTemporaryFailure(req *EmailValidationRequest, resp *EmailValidation) 
 	case isBlacklistError(resp.SmtpResponse.Description):
 		blacklisted(req, resp)
 	case isGreylistError(resp.SmtpResponse.Description):
+		resp.RetryValidation = true
 		greylisted(req, resp)
 	case isMailboxFullError(resp.SmtpResponse.Description):
 		handleMailboxFull(resp)
