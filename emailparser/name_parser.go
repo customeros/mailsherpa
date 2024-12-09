@@ -41,6 +41,44 @@ var (
 	surnames   map[string]bool
 )
 
+func Parse(email string) (ParsedEmail, error) {
+	ok, cleanEmail, username, _ := syntax.NormalizeEmailAddress(email)
+	if !ok {
+		return ParsedEmail{}, ErrInvalidEmail
+	}
+
+	username = strings.ToLower(username)
+
+	// Try delimited format first if it contains a dot
+	if strings.Contains(username, ".") {
+		if result, ok := tryDelimitedFormat(username); ok {
+			result.Email = cleanEmail
+			return result, nil
+		}
+
+		// If delimited format didn't match, remove dots before trying other patterns
+		username = strings.ReplaceAll(username, ".", "")
+	}
+
+	// Try other patterns with cleaned username
+	for _, tryPattern := range []func(string) (ParsedEmail, bool){
+		trySingleName,
+		tryCombinedName,
+		tryNameWithInitial,
+		tryInitialSurname,
+	} {
+		if result, ok := tryPattern(username); ok {
+			result.Email = cleanEmail
+			return result, nil
+		}
+	}
+
+	return ParsedEmail{
+		Email:   cleanEmail,
+		Pattern: string(PatternUnknown),
+	}, nil
+}
+
 // tryDelimitedFormat handles all patterns with dots
 func tryDelimitedFormat(username string) (ParsedEmail, bool) {
 	parts := strings.Split(username, ".")
@@ -97,6 +135,9 @@ func tryDelimitedFormat(username string) (ParsedEmail, bool) {
 
 // tryNameWithInitial handles trailing initials without dots
 func tryNameWithInitial(username string) (ParsedEmail, bool) {
+	if len(username) < 5 {
+		return ParsedEmail{}, false
+	}
 	// Try to find a known first name
 	for i := 2; i < len(username); i++ {
 		possibleName := username[:i]
@@ -175,44 +216,6 @@ func trySingleName(username string) (ParsedEmail, bool) {
 		}, true
 	}
 	return ParsedEmail{}, false
-}
-
-func Parse(email string) (ParsedEmail, error) {
-	ok, cleanEmail, username, _ := syntax.NormalizeEmailAddress(email)
-	if !ok {
-		return ParsedEmail{}, ErrInvalidEmail
-	}
-
-	username = strings.ToLower(username)
-
-	// Try delimited format first if it contains a dot
-	if strings.Contains(username, ".") {
-		if result, ok := tryDelimitedFormat(username); ok {
-			result.Email = cleanEmail
-			return result, nil
-		}
-
-		// If delimited format didn't match, remove dots before trying other patterns
-		username = strings.ReplaceAll(username, ".", "")
-	}
-
-	// Try other patterns with cleaned username
-	for _, tryPattern := range []func(string) (ParsedEmail, bool){
-		tryCombinedName,
-		tryNameWithInitial,
-		tryInitialSurname,
-		trySingleName,
-	} {
-		if result, ok := tryPattern(username); ok {
-			result.Email = cleanEmail
-			return result, nil
-		}
-	}
-
-	return ParsedEmail{
-		Email:   cleanEmail,
-		Pattern: string(PatternUnknown),
-	}, nil
 }
 
 func init() {
