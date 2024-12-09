@@ -129,6 +129,16 @@ func TestParse(t *testing.T) {
 				Pattern:   string(PatternFirstName),
 			},
 		},
+		{
+			name:  "firstname only #3",
+			email: "alex@acme.com",
+			want: ParsedEmail{
+				Email:     "alex@acme.com",
+				FirstName: "Alex",
+				LastName:  "",
+				Pattern:   string(PatternFirstName),
+			},
+		},
 	}
 
 	for _, tt := range tests {
