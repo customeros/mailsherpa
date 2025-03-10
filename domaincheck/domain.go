@@ -9,7 +9,228 @@ import (
 	"time"
 
 	"github.com/customeros/mailsherpa/internal/syntax"
+	"github.com/miekg/dns"
 )
+
+// dnsResolver implements a custom resolver that tries multiple DNS servers
+type dnsResolver struct {
+	servers []string
+	timeout time.Duration
+}
+
+// newDNSResolver creates a new DNS resolver with fallback servers
+func newDNSResolver() *dnsResolver {
+	return &dnsResolver{
+		servers: []string{
+			"",        // empty string means use system resolver
+			"8.8.8.8", // Google DNS
+			"1.1.1.1", // Cloudflare DNS
+		},
+		timeout: 5 * time.Second,
+	}
+}
+
+// lookupMX performs MX record lookup with fallback to different DNS servers
+func (r *dnsResolver) lookupMX(domain string) ([]*net.MX, error) {
+	var lastErr error
+
+	for _, server := range r.servers {
+		if server == "" {
+			// Use system resolver
+			mxRecords, err := net.LookupMX(domain)
+			if err == nil {
+				return mxRecords, nil
+			}
+			lastErr = err
+			continue
+		}
+
+		// Use miekg/dns for direct DNS queries
+		c := new(dns.Client)
+		c.Timeout = r.timeout
+
+		m := new(dns.Msg)
+		m.SetQuestion(dns.Fqdn(domain), dns.TypeMX)
+		m.RecursionDesired = true
+
+		r, _, err := c.Exchange(m, server+":53")
+		if err != nil {
+			lastErr = err
+			continue
+		}
+
+		// Check if domain exists but has no MX records
+		if r.Rcode == dns.RcodeSuccess {
+			var mxRecords []*net.MX
+			for _, ans := range r.Answer {
+				if mx, ok := ans.(*dns.MX); ok {
+					mxRecords = append(mxRecords, &net.MX{
+						Host: strings.TrimSuffix(mx.Mx, "."),
+						Pref: mx.Preference,
+					})
+				}
+			}
+
+			// If we got a successful response but no MX records, the domain exists but has no MX records
+			if len(mxRecords) == 0 {
+				return nil, fmt.Errorf("no MX records found")
+			}
+
+			return mxRecords, nil
+		}
+
+		lastErr = fmt.Errorf("DNS query failed with code %v", r.Rcode)
+	}
+	return nil, lastErr
+}
+
+// lookupTXT performs TXT record lookup with fallback to different DNS servers
+func (r *dnsResolver) lookupTXT(domain string) ([]string, error) {
+	var lastErr error
+	for _, server := range r.servers {
+		if server == "" {
+			// Use system resolver
+			txtRecords, err := net.LookupTXT(domain)
+			if err == nil {
+				return txtRecords, nil
+			}
+			lastErr = err
+			continue
+		}
+
+		// Use miekg/dns for direct DNS queries
+		c := new(dns.Client)
+		c.Timeout = r.timeout
+
+		m := new(dns.Msg)
+		m.SetQuestion(dns.Fqdn(domain), dns.TypeTXT)
+		m.RecursionDesired = true
+
+		r, _, err := c.Exchange(m, server+":53")
+		if err != nil {
+			lastErr = err
+			continue
+		}
+
+		if r.Rcode != dns.RcodeSuccess {
+			lastErr = fmt.Errorf("DNS query failed with code %v", r.Rcode)
+			continue
+		}
+
+		var txtRecords []string
+		for _, ans := range r.Answer {
+			if txt, ok := ans.(*dns.TXT); ok {
+				txtRecords = append(txtRecords, strings.Join(txt.Txt, ""))
+			}
+		}
+
+		if len(txtRecords) > 0 {
+			return txtRecords, nil
+		}
+	}
+	return nil, lastErr
+}
+
+// lookupCNAME performs CNAME record lookup with fallback to different DNS servers
+func (r *dnsResolver) lookupCNAME(domain string) (string, error) {
+	var lastErr error
+	for _, server := range r.servers {
+		if server == "" {
+			// Use system resolver
+			cname, err := net.LookupCNAME(domain)
+			if err == nil {
+				return cname, nil
+			}
+			lastErr = err
+			continue
+		}
+
+		// Use miekg/dns for direct DNS queries
+		c := new(dns.Client)
+		c.Timeout = r.timeout
+
+		m := new(dns.Msg)
+		m.SetQuestion(dns.Fqdn(domain), dns.TypeCNAME)
+		m.RecursionDesired = true
+
+		r, _, err := c.Exchange(m, server+":53")
+		if err != nil {
+			lastErr = err
+			continue
+		}
+
+		if r.Rcode != dns.RcodeSuccess {
+			lastErr = fmt.Errorf("DNS query failed with code %v", r.Rcode)
+			continue
+		}
+
+		for _, ans := range r.Answer {
+			if cname, ok := ans.(*dns.CNAME); ok {
+				return strings.TrimSuffix(cname.Target, "."), nil
+			}
+		}
+	}
+	return "", lastErr
+}
+
+// lookupIP performs IP lookup with fallback to different DNS servers
+func (r *dnsResolver) lookupIP(domain string) ([]net.IP, error) {
+	var lastErr error
+	for _, server := range r.servers {
+		if server == "" {
+			// Use system resolver
+			ips, err := net.LookupIP(domain)
+			if err == nil {
+				return ips, nil
+			}
+			lastErr = err
+			continue
+		}
+
+		// Use miekg/dns for direct DNS queries
+		c := new(dns.Client)
+		c.Timeout = r.timeout
+
+		var ips []net.IP
+
+		// Try A records
+		m := new(dns.Msg)
+		m.SetQuestion(dns.Fqdn(domain), dns.TypeA)
+		m.RecursionDesired = true
+
+		r, _, err := c.Exchange(m, server+":53")
+		if err == nil && r.Rcode == dns.RcodeSuccess {
+			for _, ans := range r.Answer {
+				if a, ok := ans.(*dns.A); ok {
+					ips = append(ips, a.A)
+				}
+			}
+		}
+
+		// Try AAAA records
+		m = new(dns.Msg)
+		m.SetQuestion(dns.Fqdn(domain), dns.TypeAAAA)
+		m.RecursionDesired = true
+
+		r, _, err = c.Exchange(m, server+":53")
+		if err == nil && r.Rcode == dns.RcodeSuccess {
+			for _, ans := range r.Answer {
+				if aaaa, ok := ans.(*dns.AAAA); ok {
+					ips = append(ips, aaaa.AAAA)
+				}
+			}
+		}
+
+		if len(ips) > 0 {
+			return ips, nil
+		}
+
+		if err != nil {
+			lastErr = err
+		}
+	}
+	return nil, lastErr
+}
 
 type DNS struct {
 	MX     []string
@@ -24,12 +245,12 @@ func CheckDNS(domain string) DNS {
 	var mxErr, spfErr error
 
 	dns.HasA = hasAorAAAARecord(domain)
-
 	dns.MX, mxErr = getMXRecordsForDomain(domain)
-	dns.SPF, spfErr = getSPFRecord(domain)
 	if mxErr != nil {
 		dns.Errors = append(dns.Errors, mxErr.Error())
 	}
+
+	dns.SPF, spfErr = getSPFRecord(domain)
 	if spfErr != nil {
 		dns.Errors = append(dns.Errors, spfErr.Error())
 	}
@@ -38,6 +259,7 @@ func CheckDNS(domain string) DNS {
 	if exists {
 		dns.CNAME = cname
 	}
+
 	return dns
 }
 
@@ -139,7 +361,6 @@ func PrimaryDomainCheck(domain string) (bool, string) {
 }
 
 func cleanDomain(domain string) string {
-
 	domain = strings.TrimPrefix(domain, "http://")
 	domain = strings.TrimPrefix(domain, "https://")
 	domain = strings.Trim(domain, "/")
@@ -184,16 +405,13 @@ func getMXRecordsForDomain(domain string) ([]string, error) {
 }
 
 func getRawMXRecords(domain string) ([]*net.MX, error) {
-	mxRecords, err := net.LookupMX(domain)
-	if err != nil {
-		return nil, err
-	}
-
-	return mxRecords, nil
+	resolver := newDNSResolver()
+	return resolver.lookupMX(domain)
 }
 
 func getSPFRecord(domain string) (string, error) {
-	records, err := net.LookupTXT(domain)
+	resolver := newDNSResolver()
+	records, err := resolver.lookupTXT(domain)
 	if err != nil {
 		return "", fmt.Errorf("error looking up TXT records: %w", err)
 	}
@@ -207,7 +425,8 @@ func getSPFRecord(domain string) (string, error) {
 }
 
 func getCNAMERecord(domain string) (bool, string) {
-	cname, err := net.LookupCNAME(domain)
+	resolver := newDNSResolver()
+	cname, err := resolver.lookupCNAME(domain)
 	if err != nil {
 		return false, ""
 	}
@@ -224,7 +443,8 @@ func getCNAMERecord(domain string) (bool, string) {
 }
 
 func hasAorAAAARecord(domain string) bool {
-	ips, err := net.LookupIP(domain)
+	resolver := newDNSResolver()
+	ips, err := resolver.lookupIP(domain)
 	if err != nil {
 		return false
 	}
