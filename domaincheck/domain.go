@@ -232,12 +232,13 @@ func (r *dnsResolver) lookupIP(domain string) ([]net.IP, error) {
 	return nil, lastErr
 }
 
+// DNS represents the DNS records and status for a domain
 type DNS struct {
-	MX     []string
-	SPF    string
-	CNAME  string
-	HasA   bool
-	Errors []string
+	MX     []string // List of MX record hostnames, sorted by priority
+	SPF    string   // SPF record content if present
+	CNAME  string   // CNAME record if present
+	HasA   bool     // Whether the domain has A or AAAA records
+	Errors []string // Collection of any errors encountered during DNS lookups
 }
 
 func CheckDNS(domain string) DNS {
